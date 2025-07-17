@@ -1,0 +1,91 @@
+{
+  "name": "mcp-langchain-extension",
+  "displayName": "MCP LangChain Extension",
+  "description": "VS Code extension using LangChain to connect with MCP servers",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onCommand:mcp-langchain.connect",
+    "onCommand:mcp-langchain.disconnect",
+    "onCommand:mcp-langchain.query"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "mcp-langchain.connect",
+        "title": "MCP: Connect to Server",
+        "category": "MCP LangChain"
+      },
+      {
+        "command": "mcp-langchain.disconnect",
+        "title": "MCP: Disconnect from Server",
+        "category": "MCP LangChain"
+      },
+      {
+        "command": "mcp-langchain.query",
+        "title": "MCP: Query Server",
+        "category": "MCP LangChain"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "mcp-langchain",
+          "title": "MCP LangChain",
+          "icon": "resources/icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "mcp-langchain": [
+        {
+          "id": "mcp-servers",
+          "name": "MCP Servers"
+        },
+        {
+          "id": "mcp-connections",
+          "name": "Active Connections"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "pnpm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "pnpm run compile && pnpm run lint",
+    "lint": "eslint src --ext ts",
+    "test": "node ./out/test/runTest.js",
+    "build:webview": "pnpm run build:tailwind && pnpm run build:webpack",
+    "build:tailwind": "tailwindcss -i ./src/webview/input.css -o ./out/webview/styles.css --watch",
+    "build:webpack": "webpack --mode development",
+    "build:webpack:prod": "webpack --mode production"
+  },
+  "devDependencies": {
+    "@types/node": "18.x",
+    "@types/vscode": "^1.85.0",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "css-loader": "^6.8.0",
+    "eslint": "^8.0.0",
+    "mini-css-extract-plugin": "^2.7.0",
+    "style-loader": "^3.3.0",
+    "tailwindcss": "^3.4.0",
+    "typescript": "^5.0.0",
+    "webpack": "^5.89.0",
+    "webpack-cli": "^5.1.0"
+  },
+  "dependencies": {
+    "@langchain/core": "^0.1.0",
+    "@langchain/openai": "^0.0.14",
+    "langchain": "^0.1.0",
+    "node-fetch": "^3.3.0",
+    "ws": "^8.14.0"
+  }
+}
