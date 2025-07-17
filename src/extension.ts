@@ -1,50 +1,58 @@
 import * as vscode from 'vscode';
-import { MCPConnectionManager } from './services/mcp-connection-manager';
+import { Context7Service } from './services/context7-service';
+import { PlaywrightService } from './services/playwright-service';
 import { CommandManager } from './services/command-manager';
 import { ViewProvider } from './providers/view-provider';
 
 export function activate(context: vscode.ExtensionContext) {
-  console.log('MCP LangChain Extension is now active!');
+  console.log('Context7 Playwright Extension is now active!');
 
   // Initialize services following Single Responsibility Principle
-  const connectionManager = new MCPConnectionManager();
-  const commandManager = new CommandManager(connectionManager);
-  const viewProvider = new ViewProvider(connectionManager);
+  const context7Service = new Context7Service();
+  const playwrightService = new PlaywrightService();
+  const commandManager = new CommandManager(context7Service, playwrightService);
+  const viewProvider = new ViewProvider(context7Service, playwrightService);
 
   // Register commands
-  const connectCommand = vscode.commands.registerCommand('mcp-langchain.connect', () => {
-    commandManager.handleConnect();
+  const lookupCommand = vscode.commands.registerCommand('context7-playwright.lookup', () => {
+    commandManager.handleLookup();
   });
 
-  const disconnectCommand = vscode.commands.registerCommand('mcp-langchain.disconnect', () => {
-    commandManager.handleDisconnect();
+  const generateCommand = vscode.commands.registerCommand('context7-playwright.generate', () => {
+    commandManager.handleGenerate();
   });
 
-  const queryCommand = vscode.commands.registerCommand('mcp-langchain.query', () => {
-    commandManager.handleQuery();
+  const browseCommand = vscode.commands.registerCommand('context7-playwright.browse', () => {
+    commandManager.handleBrowse();
   });
 
   // Register view providers
-  const serversProvider = vscode.window.registerWebviewViewProvider(
-    'mcp-servers',
-    viewProvider.getServersProvider()
+  const lookupProvider = vscode.window.registerWebviewViewProvider(
+    'context7-lookup',
+    viewProvider.getLookupProvider()
   );
 
-  const connectionsProvider = vscode.window.registerWebviewViewProvider(
-    'mcp-connections',
-    viewProvider.getConnectionsProvider()
+  const generatorProvider = vscode.window.registerWebviewViewProvider(
+    'context7-generator',
+    viewProvider.getGeneratorProvider()
+  );
+
+  const browserProvider = vscode.window.registerWebviewViewProvider(
+    'context7-browser',
+    viewProvider.getBrowserProvider()
   );
 
   // Add to subscriptions
   context.subscriptions.push(
-    connectCommand,
-    disconnectCommand,
-    queryCommand,
-    serversProvider,
-    connectionsProvider
+    lookupCommand,
+    generateCommand,
+    browseCommand,
+    lookupProvider,
+    generatorProvider,
+    browserProvider
   );
 }
 
 export function deactivate() {
-  console.log('MCP LangChain Extension is now deactivated!');
+  console.log('Context7 Playwright Extension is now deactivated!');
 } 

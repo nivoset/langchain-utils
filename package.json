@@ -1,7 +1,7 @@
 {
-  "name": "mcp-langchain-extension",
-  "displayName": "MCP LangChain Extension",
-  "description": "VS Code extension using LangChain to connect with MCP servers",
+  "name": "context7-playwright-extension",
+  "displayName": "Context7 Playwright Extension",
+  "description": "VS Code extension using Context7 MCP and Playwright for code lookup and generation",
   "version": "0.0.1",
   "engines": {
     "vscode": "^1.85.0"
@@ -10,47 +10,51 @@
     "Other"
   ],
   "activationEvents": [
-    "onCommand:mcp-langchain.connect",
-    "onCommand:mcp-langchain.disconnect",
-    "onCommand:mcp-langchain.query"
+    "onCommand:context7-playwright.lookup",
+    "onCommand:context7-playwright.generate",
+    "onCommand:context7-playwright.browse"
   ],
   "main": "./out/extension.js",
   "contributes": {
     "commands": [
       {
-        "command": "mcp-langchain.connect",
-        "title": "MCP: Connect to Server",
-        "category": "MCP LangChain"
+        "command": "context7-playwright.lookup",
+        "title": "Context7: Lookup Code",
+        "category": "Context7 Playwright"
       },
       {
-        "command": "mcp-langchain.disconnect",
-        "title": "MCP: Disconnect from Server",
-        "category": "MCP LangChain"
+        "command": "context7-playwright.generate",
+        "title": "Context7: Generate Code",
+        "category": "Context7 Playwright"
       },
       {
-        "command": "mcp-langchain.query",
-        "title": "MCP: Query Server",
-        "category": "MCP LangChain"
+        "command": "context7-playwright.browse",
+        "title": "Context7: Browse Documentation",
+        "category": "Context7 Playwright"
       }
     ],
     "viewsContainers": {
       "activitybar": [
         {
-          "id": "mcp-langchain",
-          "title": "MCP LangChain",
+          "id": "context7-playwright",
+          "title": "Context7 Playwright",
           "icon": "resources/icon.svg"
         }
       ]
     },
     "views": {
-      "mcp-langchain": [
+      "context7-playwright": [
         {
-          "id": "mcp-servers",
-          "name": "MCP Servers"
+          "id": "context7-lookup",
+          "name": "Code Lookup"
         },
         {
-          "id": "mcp-connections",
-          "name": "Active Connections"
+          "id": "context7-generator",
+          "name": "Code Generator"
+        },
+        {
+          "id": "context7-browser",
+          "name": "Documentation Browser"
         }
       ]
     }
@@ -76,7 +80,8 @@
     "eslint": "^8.0.0",
     "mini-css-extract-plugin": "^2.7.0",
     "style-loader": "^3.3.0",
-    "tailwindcss": "^3.4.0",
+    "tailwindcss": "^3.4.17",
+    "ts-loader": "^9.5.0",
     "typescript": "^5.0.0",
     "webpack": "^5.89.0",
     "webpack-cli": "^5.1.0"
@@ -86,6 +91,6 @@
     "@langchain/openai": "^0.0.14",
     "langchain": "^0.1.0",
     "node-fetch": "^3.3.0",
-    "ws": "^8.14.0"
+    "playwright": "^1.40.0"
   }
 }
