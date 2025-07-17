@@ -1,144 +1,149 @@
 import * as vscode from 'vscode';
-import { MCPConnectionManager } from './mcp-connection-manager';
-import { MCPServer } from '../models/mcp-server';
+import { Context7Service } from './context7-service';
+import { PlaywrightService } from './playwright-service';
 
 export class CommandManager {
-  constructor(private connectionManager: MCPConnectionManager) {}
+  constructor(
+    private context7Service: Context7Service,
+    private playwrightService: PlaywrightService
+  ) {}
 
-  async handleConnect(): Promise<void> {
+  async handleLookup(): Promise<void> {
     try {
-      // Get server configuration from user
-      const server = await this.promptForServer();
-      if (!server) {
-        return;
-      }
-
-      await this.connectionManager.connectToServer(server);
-    } catch (error) {
-      vscode.window.showErrorMessage(`Connection failed: ${error}`);
-    }
-  }
-
-  async handleDisconnect(): Promise<void> {
-    try {
-      const connections = this.connectionManager.getActiveConnections();
-      if (connections.length === 0) {
-        vscode.window.showInformationMessage('No active connections to disconnect.');
-        return;
-      }
-
-      if (connections.length === 1) {
-        await this.connectionManager.disconnectFromServer(connections[0].id);
-        return;
-      }
-
-      // Multiple connections - let user choose
-      const connectionNames = connections.map(c => c.server.name);
-      const selected = await vscode.window.showQuickPick(connectionNames, {
-        placeHolder: 'Select connection to disconnect'
-      });
-
-      if (selected) {
-        const connection = connections.find(c => c.server.name === selected);
-        if (connection) {
-          await this.connectionManager.disconnectFromServer(connection.id);
-        }
-      }
-    } catch (error) {
-      vscode.window.showErrorMessage(`Disconnect failed: ${error}`);
-    }
-  }
-
-  async handleQuery(): Promise<void> {
-    try {
-      const connections = this.connectionManager.getActiveConnections();
-      if (connections.length === 0) {
-        vscode.window.showInformationMessage('No active connections. Please connect to an MCP server first.');
-        return;
-      }
-
-      let selectedConnection: any;
-      if (connections.length === 1) {
-        selectedConnection = connections[0];
-      } else {
-        const connectionNames = connections.map(c => c.server.name);
-        const selected = await vscode.window.showQuickPick(connectionNames, {
-          placeHolder: 'Select connection to query'
-        });
-
-        if (!selected) {
-          return;
-        }
-
-        selectedConnection = connections.find(c => c.server.name === selected);
-      }
-
-      if (!selectedConnection) {
-        return;
-      }
-
       const query = await vscode.window.showInputBox({
-        prompt: 'Enter your query for the MCP server',
-        placeHolder: 'What would you like to ask?'
+        prompt: 'Enter code lookup query',
+        placeHolder: 'e.g., React useState hook, TypeScript interfaces'
       });
 
       if (!query) {
         return;
       }
 
-      const response = await this.connectionManager.queryServer(selectedConnection.id, query);
+      const language = await vscode.window.showQuickPick(
+        ['JavaScript', 'TypeScript', 'Python', 'Java', 'C#', 'Go', 'Rust'],
+        { placeHolder: 'Select programming language (optional)' }
+      );
+
+      vscode.window.showInformationMessage('Searching for code...');
       
-      // Show response in a new document
+      const results = await this.context7Service.lookupCode(query, language);
+      
+      if (results.length === 0) {
+        vscode.window.showInformationMessage('No code found for your query.');
+        return;
+      }
+
+      // Show results in a new document
+      const content = this.formatLookupResults(results);
       const document = await vscode.workspace.openTextDocument({
-        content: `Query: ${query}\n\nResponse:\n${response}`,
+        content,
         language: 'markdown'
       });
       
       await vscode.window.showTextDocument(document);
     } catch (error) {
-      vscode.window.showErrorMessage(`Query failed: ${error}`);
+      vscode.window.showErrorMessage(`Code lookup failed: ${error}`);
     }
   }
 
-  private async promptForServer(): Promise<MCPServer | undefined> {
-    const name = await vscode.window.showInputBox({
-      prompt: 'Enter server name',
-      placeHolder: 'My MCP Server'
-    });
+  async handleGenerate(): Promise<void> {
+    try {
+      // First, let user select a library
+      const libraries = this.context7Service.getMockLibraries();
+      const libraryNames = libraries.map(lib => lib.name);
+      
+      const selectedLibrary = await vscode.window.showQuickPick(libraryNames, {
+        placeHolder: 'Select a library for code generation'
+      });
 
-    if (!name) {
-      return undefined;
+      if (!selectedLibrary) {
+        return;
+      }
+
+      const library = libraries.find(lib => lib.name === selectedLibrary);
+      if (!library) {
+        return;
+      }
+
+      const prompt = await vscode.window.showInputBox({
+        prompt: `Enter code generation prompt for ${selectedLibrary}`,
+        placeHolder: 'e.g., Create a React component that displays a user profile'
+      });
+
+      if (!prompt) {
+        return;
+      }
+
+      vscode.window.showInformationMessage('Generating code...');
+      
+      const generatedCode = await this.context7Service.generateCode(library.id, prompt);
+      
+      if (!generatedCode) {
+        vscode.window.showInformationMessage('No code was generated.');
+        return;
+      }
+
+      // Show generated code in a new document
+      const document = await vscode.workspace.openTextDocument({
+        content: `# Generated Code for ${selectedLibrary}\n\n## Prompt\n${prompt}\n\n## Generated Code\n\`\`\`\n${generatedCode}\n\`\`\``,
+        language: 'markdown'
+      });
+      
+      await vscode.window.showTextDocument(document);
+    } catch (error) {
+      vscode.window.showErrorMessage(`Code generation failed: ${error}`);
     }
+  }
 
-    const url = await vscode.window.showInputBox({
-      prompt: 'Enter server URL',
-      placeHolder: 'ws://localhost:3000'
-    });
+  async handleBrowse(): Promise<void> {
+    try {
+      const url = await vscode.window.showInputBox({
+        prompt: 'Enter documentation URL to browse',
+        placeHolder: 'e.g., https://react.dev/reference/react/useState'
+      });
 
-    if (!url) {
-      return undefined;
+      if (!url) {
+        return;
+      }
+
+      const title = await vscode.window.showInputBox({
+        prompt: 'Enter a title for this session (optional)',
+        placeHolder: 'e.g., React useState documentation'
+      });
+
+      vscode.window.showInformationMessage('Opening documentation in browser...');
+      
+      const sessionId = await this.playwrightService.openDocumentation(url, title);
+      
+      vscode.window.showInformationMessage(`Documentation opened! Session ID: ${sessionId}`);
+    } catch (error) {
+      vscode.window.showErrorMessage(`Failed to open documentation: ${error}`);
     }
+  }
 
-    const protocol = await vscode.window.showQuickPick(['ws', 'http', 'https'], {
-      placeHolder: 'Select protocol'
+  private formatLookupResults(results: any[]): string {
+    let content = '# Code Lookup Results\n\n';
+    
+    results.forEach((result, index) => {
+      content += `## ${index + 1}. ${result.library.name}\n\n`;
+      content += `**Library:** ${result.library.name} (${result.library.description})\n\n`;
+      content += `**Trust Score:** ${result.library.trustScore}/10\n\n`;
+      content += `**Relevance:** ${Math.round(result.relevance * 100)}%\n\n`;
+      
+      if (result.documentation) {
+        content += `### Documentation\n${result.documentation}\n\n`;
+      }
+      
+      if (result.codeSnippets && result.codeSnippets.length > 0) {
+        content += `### Code Snippets\n`;
+        result.codeSnippets.forEach((snippet: string, snippetIndex: number) => {
+          content += `\`\`\`\n${snippet}\n\`\`\`\n\n`;
+        });
+      }
+      
+      content += '---\n\n';
     });
-
-    if (!protocol) {
-      return undefined;
-    }
-
-    const description = await vscode.window.showInputBox({
-      prompt: 'Enter server description (optional)',
-      placeHolder: 'Description of what this server does'
-    });
-
-    return {
-      id: `server-${Date.now()}`,
-      name,
-      description: description || '',
-      url,
-      protocol: protocol as 'ws' | 'http' | 'https',
-      capabilities: []
-    };
+    
+    return content;
   }
 } 

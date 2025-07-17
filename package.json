@@ -72,25 +72,30 @@
     "build:webpack:prod": "webpack --mode production"
   },
   "devDependencies": {
-    "@types/node": "18.x",
     "@types/vscode": "^1.85.0",
+    "@types/node": "18.x",
     "@typescript-eslint/eslint-plugin": "^6.0.0",
     "@typescript-eslint/parser": "^6.0.0",
-    "css-loader": "^6.8.0",
     "eslint": "^8.0.0",
-    "mini-css-extract-plugin": "^2.7.0",
-    "style-loader": "^3.3.0",
-    "tailwindcss": "^3.4.17",
-    "ts-loader": "^9.5.0",
     "typescript": "^5.0.0",
+    "tailwindcss": "^4.0.0",
     "webpack": "^5.89.0",
-    "webpack-cli": "^5.1.0"
+    "webpack-cli": "^5.1.0",
+    "css-loader": "^6.8.0",
+    "style-loader": "^3.3.0",
+    "mini-css-extract-plugin": "^2.7.0",
+    "ts-loader": "^9.5.0",
+    "@vscode/test-electron": "^2.3.8",
+    "@types/mocha": "^10.0.0",
+    "@types/glob": "^8.0.0",
+    "mocha": "^10.0.0",
+    "glob": "^10.0.0"
   },
   "dependencies": {
+    "langchain": "^0.1.0",
     "@langchain/core": "^0.1.0",
     "@langchain/openai": "^0.0.14",
-    "langchain": "^0.1.0",
-    "node-fetch": "^3.3.0",
-    "playwright": "^1.40.0"
+    "playwright": "^1.40.0",
+    "node-fetch": "^3.3.0"
   }
 }
