@@ -1,2 +1,6 @@
+packages:
+  - 'packages/*'
+  - 'packages/cli'
+
 onlyBuiltDependencies:
   - esbuild

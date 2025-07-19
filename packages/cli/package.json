@@ -1,0 +1,51 @@
+{
+  "name": "@libsql-tools/cli",
+  "version": "1.0.0",
+  "description": "Command-line tools for LibSQL tools",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "bin": {
+    "libsql-tools": "./dist/cli.js",
+    "rss-loader": "./dist/rss-loader.js",
+    "libsql-vectorstore": "./dist/vectorstore.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "clean": "rm -rf dist",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@libsql-tools/core": "workspace:*",
+    "@libsql-tools/rss-loader": "workspace:*",
+    "@libsql-tools/vectorstore": "workspace:*",
+    "commander": "^11.1.0",
+    "node-cron": "^3.0.3"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "@types/node-cron": "^3.0.11",
+    "tsup": "^8.0.0",
+    "typescript": "^5.3.0"
+  },
+  "keywords": [
+    "libsql",
+    "cli",
+    "rss",
+    "vectorstore",
+    "tools"
+  ],
+  "author": "Your Name",
+  "license": "MIT"
+} 

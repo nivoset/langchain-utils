@@ -1,0 +1,50 @@
+{
+  "name": "@libsql-tools/vectorstore",
+  "version": "1.0.0",
+  "description": "LibSQL vector store implementation for embeddings and similarity search",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./cli": {
+      "import": "./dist/cli.js",
+      "types": "./dist/cli.d.ts"
+    }
+  },
+
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "clean": "rm -rf dist",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@libsql-tools/core": "workspace:*",
+    "@langchain/core": "^0.3.0",
+    "@langchain/ollama": "^0.2.0",
+    "langchain": "^0.2.0",
+    "commander": "^11.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "tsup": "^8.0.0",
+    "typescript": "^5.3.0"
+  },
+  "keywords": [
+    "libsql",
+    "vectorstore",
+    "embeddings",
+    "similarity-search",
+    "langchain"
+  ],
+  "author": "Your Name",
+  "license": "MIT"
+} 

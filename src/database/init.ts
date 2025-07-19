@@ -5,7 +5,7 @@ dotenv.config();
 
 // Create client with proper configuration
 const client = createClient({
-  url: process.env.LIBSQL_URL || 'file:./tech_news.db',
+  url: process.env.LIBSQL_URL || 'file:../../tech_news.db',
   authToken: process.env.LIBSQL_AUTH_TOKEN
 });
 

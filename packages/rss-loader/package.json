@@ -1,0 +1,51 @@
+{
+  "name": "@libsql-tools/rss-loader",
+  "version": "1.0.0",
+  "description": "RSS feed loader and manager for LibSQL",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./cli": {
+      "import": "./dist/cli.js",
+      "types": "./dist/cli.d.ts"
+    }
+  },
+
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "clean": "rm -rf dist",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@libsql-tools/core": "workspace:*",
+    "rss-parser": "^3.13.0",
+    "commander": "^11.1.0",
+    "node-cron": "^3.0.3",
+    "date-fns": "^2.30.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "@types/node-cron": "^3.0.11",
+    "tsup": "^8.0.0",
+    "typescript": "^5.3.0"
+  },
+  "keywords": [
+    "libsql",
+    "rss",
+    "feeds",
+    "loader",
+    "parser"
+  ],
+  "author": "Your Name",
+  "license": "MIT"
+} 

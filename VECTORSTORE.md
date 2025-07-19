@@ -28,7 +28,7 @@ Add to your `.env` file:
 
 ```env
 # Database Configuration
-LIBSQL_URL=file:./tech_news.db
+LIBSQL_URL=file:../../tech_news.db
 LIBSQL_AUTH_TOKEN=
 
 # Ollama Configuration
@@ -61,7 +61,7 @@ import { createClient } from '@libsql/client';
 
 // Create client and embeddings
 const client = createClient({
-  url: 'file:./tech_news.db'
+  url: 'file:../../tech_news.db'
 });
 
 const embeddings = new OllamaEmbeddings({
