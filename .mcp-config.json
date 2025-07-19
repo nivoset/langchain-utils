@@ -1,0 +1,15 @@
+{
+  "jira": {
+    "baseUrl": "https://your-company.atlassian.net",
+    "username": "your-email@company.com",
+    "apiToken": "your-api-token",
+    "projectKey": "PROJ"
+  },
+  "prRules": {
+    "maxTitleLength": 72,
+    "requireJiraLink": true,
+    "requireDescription": true,
+    "conventionalCommits": true,
+    "templatePath": "./pr-template.md"
+  }
+} 

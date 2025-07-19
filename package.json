@@ -1,101 +1,89 @@
 {
-  "name": "context7-playwright-extension",
-  "displayName": "Context7 Playwright Extension",
-  "description": "VS Code extension using Context7 MCP and Playwright for code lookup and generation",
-  "version": "0.0.1",
-  "engines": {
-    "vscode": "^1.85.0"
-  },
-  "categories": [
-    "Other"
-  ],
-  "activationEvents": [
-    "onCommand:context7-playwright.lookup",
-    "onCommand:context7-playwright.generate",
-    "onCommand:context7-playwright.browse"
-  ],
-  "main": "./out/extension.js",
-  "contributes": {
-    "commands": [
-      {
-        "command": "context7-playwright.lookup",
-        "title": "Context7: Lookup Code",
-        "category": "Context7 Playwright"
-      },
-      {
-        "command": "context7-playwright.generate",
-        "title": "Context7: Generate Code",
-        "category": "Context7 Playwright"
-      },
-      {
-        "command": "context7-playwright.browse",
-        "title": "Context7: Browse Documentation",
-        "category": "Context7 Playwright"
-      }
-    ],
-    "viewsContainers": {
-      "activitybar": [
-        {
-          "id": "context7-playwright",
-          "title": "Context7 Playwright",
-          "icon": "resources/icon.svg"
-        }
-      ]
-    },
-    "views": {
-      "context7-playwright": [
-        {
-          "id": "context7-lookup",
-          "name": "Code Lookup"
-        },
-        {
-          "id": "context7-generator",
-          "name": "Code Generator"
-        },
-        {
-          "id": "context7-browser",
-          "name": "Documentation Browser"
-        }
-      ]
-    }
-  },
+  "name": "tech-news-analyzer",
+  "version": "1.0.0",
+  "description": "Tech news scraping and analysis system with libsql storage and embeddings",
+  "main": "dist/index.js",
+  "type": "module",
   "scripts": {
-    "vscode:prepublish": "pnpm run compile",
-    "compile": "tsc -p ./",
-    "watch": "tsc -watch -p ./",
-    "pretest": "pnpm run compile && pnpm run lint",
-    "lint": "eslint src --ext ts",
-    "test": "node ./out/test/runTest.js",
-    "build:webview": "pnpm run build:tailwind && pnpm run build:webpack",
-    "build:tailwind": "tailwindcss -i ./src/webview/input.css -o ./out/webview/styles.css --watch",
-    "build:webpack": "webpack --mode development",
-    "build:webpack:prod": "webpack --mode production"
-  },
-  "devDependencies": {
-    "@types/vscode": "^1.85.0",
-    "@types/node": "18.x",
-    "@typescript-eslint/eslint-plugin": "^6.0.0",
-    "@typescript-eslint/parser": "^6.0.0",
-    "eslint": "^8.0.0",
-    "typescript": "^5.0.0",
-    "tailwindcss": "^4.0.0",
-    "webpack": "^5.89.0",
-    "webpack-cli": "^5.1.0",
-    "css-loader": "^6.8.0",
-    "style-loader": "^3.3.0",
-    "mini-css-extract-plugin": "^2.7.0",
-    "ts-loader": "^9.5.0",
-    "@vscode/test-electron": "^2.3.8",
-    "@types/mocha": "^10.0.0",
-    "@types/glob": "^8.0.0",
-    "mocha": "^10.0.0",
-    "glob": "^10.0.0"
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "tsx src/scraper.ts",
+    "test": "jest",
+    "scrape": "tsx src/scraper.ts",
+    "scrape:debug": "tsx src/scraper.ts scrape --debug",
+    "scrape:source": "tsx src/scraper.ts scrape --source",
+    "scrape:source:debug": "tsx src/scraper.ts scrape --source --debug",
+    "rss": "tsx src/rss.ts",
+    "rss:fetch": "tsx src/rss.ts fetch",
+    "rss:list": "tsx src/rss.ts list",
+    "rss:add": "tsx src/rss.ts add",
+    "rss:remove": "tsx src/rss.ts remove",
+    "rss:schedule": "tsx src/rss.ts schedule",
+    "rss:stats": "tsx src/rss.ts stats",
+    "rss:sync-vectorstore": "tsx src/rss.ts sync-vectorstore",
+    "rss-loader": "tsx src/loaders/rss-loader-cli.ts",
+    "rss-loader:load": "tsx src/loaders/rss-loader-cli.ts load",
+    "rss-loader:multiple": "tsx src/loaders/rss-loader-cli.ts load-multiple",
+    "rss-loader:feeds": "tsx src/loaders/rss-loader-cli.ts load-feeds",
+    "rss-loader:list": "tsx src/loaders/rss-loader-cli.ts list",
+    "rss-loader:test": "tsx src/loaders/rss-loader-cli.ts test",
+    "analysis": "tsx src/analysis.ts",
+    "analysis:companies": "tsx src/analysis.ts companies",
+    "analysis:sentiment": "tsx src/analysis.ts sentiment",
+    "analysis:risks": "tsx src/analysis.ts risks",
+    "analysis:opportunities": "tsx src/analysis.ts opportunities",
+    "analysis:stats": "tsx src/analysis.ts stats",
+    "bluesky": "tsx src/bluesky.ts",
+    "bluesky:search": "tsx src/bluesky.ts search",
+    "bluesky:events": "tsx src/bluesky.ts events",
+    "bluesky:trending": "tsx src/bluesky.ts trending",
+    "bluesky:monitor": "tsx src/bluesky.ts monitor",
+    "analyzer": "tsx src/analyzer.ts",
+    "db:init": "tsx src/database/init.ts",
+    "vectorstore": "tsx src/vectorstore.ts",
+    "vectorstore:init": "tsx src/vectorstore.ts init",
+    "vectorstore:add": "tsx src/vectorstore.ts add",
+    "vectorstore:sync": "tsx src/vectorstore.ts sync",
+    "vectorstore:search": "tsx src/vectorstore.ts search",
+    "vectorstore:company": "tsx src/vectorstore.ts company",
+    "vectorstore:sentiment": "tsx src/vectorstore.ts sentiment",
+    "vectorstore:stats": "tsx src/vectorstore.ts stats",
+    "vectorstore:cleanup": "tsx src/vectorstore.ts cleanup",
+    "vectorstore:duplicates": "tsx src/vectorstore.ts duplicates",
+    "vectorstore:dedupe": "tsx src/vectorstore.ts dedupe"
   },
   "dependencies": {
-    "langchain": "^0.1.0",
-    "@langchain/core": "^0.1.0",
-    "@langchain/openai": "^0.0.14",
+    "@atproto/api": "^0.8.0",
+    "@langchain/core": "^0.3.0",
+    "@langchain/ollama": "^0.2.0",
+    "@libsql/client": "^0.5.0",
+    "@playwright/test": "^1.54.1",
+    "cheerio": "^1.0.0-rc.12",
+    "commander": "^11.1.0",
+    "date-fns": "^2.30.0",
+    "dotenv": "^16.3.0",
+    "langchain": "^0.2.0",
+    "node-cron": "^3.0.3",
     "playwright": "^1.40.0",
-    "node-fetch": "^3.3.0"
-  }
+    "rss-parser": "^3.13.0"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.0",
+    "@types/node": "^20.10.0",
+    "@types/node-cron": "^3.0.11",
+    "jest": "^29.7.0",
+    "tsx": "^4.6.0",
+    "typescript": "^5.3.0"
+  },
+  "keywords": [
+    "tech-news",
+    "scraping",
+    "embeddings",
+    "libsql",
+    "analysis",
+    "ollama",
+    "langchain"
+  ],
+  "author": "Your Name",
+  "license": "MIT"
 }
