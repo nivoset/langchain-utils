@@ -10,6 +10,8 @@ A sophisticated system for optimizing prompts by reducing token count while main
 - **Configurable Parameters**: Adjustable reduction targets and similarity thresholds
 - **Batch Processing**: Optimize multiple prompts at once
 - **Detailed Analysis**: Comprehensive prompt analysis and optimization insights
+- **Drift Generation**: Creates semantically similar but lexically different prompt variations for testing robustness
+- **Minified Drift Generation**: Creates shorter, more concise prompt variations while maintaining semantic similarity
 
 ## How It Works
 
@@ -75,6 +77,26 @@ npm run prompt-optimizer:batch prompts.txt --reduction 30 --similarity 0.85
 npm run prompt-optimizer:batch prompts.json --format json --output results.json
 ```
 
+#### Generate Drift Prompts
+
+```bash
+# Generate semantically similar prompt variations
+npm run prompt-optimizer:drift "Your prompt here" --number 5 --min-similarity 0.7 --max-similarity 0.95
+
+# Save drift prompts to file with verbose output
+npm run prompt-optimizer:drift "Your prompt" --number 10 --output drift-prompts.json --verbose
+```
+
+#### Generate Minified Drift Prompts
+
+```bash
+# Generate shorter, more concise prompt variations
+npm run prompt-optimizer:minify-drift "Your prompt here" --number 5 --reduction 40 --similarity 0.8
+
+# Save minified drift prompts to file with verbose output
+npm run prompt-optimizer:minify-drift "Your prompt" --number 10 --reduction 50 --output minified-drift.json --verbose
+```
+
 #### Compare Strategies
 
 ```bash
@@ -108,6 +130,31 @@ const analysis = await optimizer.analyzePrompt("Your prompt");
 console.log(`Word count: ${analysis.wordCount}`);
 console.log(`Estimated tokens: ${analysis.estimatedTokens}`);
 console.log(`Readability score: ${analysis.readabilityScore}/100`);
+
+// Generate drift prompts
+const driftPrompts = await optimizer.generateDriftPrompts(
+  "Your prompt here",
+  5,    // number of variations
+  0.7,  // min similarity
+  0.95  // max similarity
+);
+
+driftPrompts.forEach((drift, index) => {
+  console.log(`Variation ${index + 1}: "${drift.variation}" (${(drift.similarity * 100).toFixed(1)}%)`);
+});
+
+// Generate minified drift prompts
+const minifiedDrifts = await optimizer.generateMinifiedDriftPrompts(
+  "Your prompt here",
+  5,    // number of variations
+  0.8,  // min similarity
+  0.3   // target 30% reduction
+);
+
+minifiedDrifts.forEach((drift, index) => {
+  const tokenReduction = ((originalPrompt.length - drift.variation.length) / originalPrompt.length) * 100;
+  console.log(`Minified ${index + 1}: "${drift.variation}" (${tokenReduction.toFixed(1)}% reduction, ${(drift.similarity * 100).toFixed(1)}% similarity)`);
+});
 ```
 
 ## Configuration
@@ -145,6 +192,34 @@ Examine the implications of recent quantum computing developments, focusing on h
 - **Token reduction**: 70%
 - **Similarity score**: 87%
 
+### Drift Generation Example
+
+**Original Prompt:**
+```
+Please provide a comprehensive analysis of the current market trends in the technology sector, including detailed insights about artificial intelligence developments, machine learning advancements, and their potential impact on various industries and business models.
+```
+
+**Generated Variations:**
+1. **Synonym Replacement** (93.6% similarity): "Please provide a comprehensive analysis of the current domain developments in the technology sector, including elaborate insights about AI developments, machine learning developments, and their possible result on various markets and commercial models."
+
+2. **Perspective Shift** (92.7% similarity): "Please provide a comprehensive analysis of the market landscape in the tech industry, including detailed insights about AI technologies developments, machine learning advancements, and their potential impact on various industries and business models."
+
+3. **Tone Variation** (91.2% similarity): "I would appreciate if you could furnish a thorough examination of the present market patterns in the technological domain, including detailed perspectives on artificial intelligence innovations, machine learning progress, and their prospective influence on diverse sectors and organizational frameworks."
+
+### Minified Drift Generation Example
+
+**Original Prompt:**
+```
+Please provide a comprehensive analysis of the current market trends in the technology sector, including detailed insights about artificial intelligence developments, machine learning advancements, and their potential impact on various industries and business models.
+```
+
+**Generated Minified Variations:**
+1. **Concise Synonyms** (95.5% similarity, 16.4% reduction): "Please provide a full analysis of the market trends in the tech industry, including exact insights about artificial intelligence developments, ML improvements, and their likely influence on diverse areas and business models."
+
+2. **Phrase Condensation** (94.8% similarity, 29.9% reduction): "Please provide a analysis of the market trends in the tech sector, including insights on AI developments, ML advancements, and their impact on different sectors and business approaches."
+
+3. **Direct Style** (93.2% similarity, 35.7% reduction): "Show analysis of market trends in tech sector, including insights on AI developments, ML advancements, and their impact on industries and business models."
+
 ## Testing
 
 Run the comprehensive test suite:
@@ -154,6 +229,22 @@ npm run test:prompt-optimization
 ```
 
 This will test various prompt types and optimization strategies, providing detailed output for analysis.
+
+Test drift generation capabilities:
+
+```bash
+npm run test:drift-generation
+```
+
+This will test drift generation with various prompt types and similarity ranges.
+
+Test minified drift generation capabilities:
+
+```bash
+npm run test:minified-drift
+```
+
+This will test minified drift generation with various prompt types and reduction targets.
 
 ## File Formats
 

@@ -1,0 +1,22 @@
+[
+  {
+    "name": "comprehensive_analysis_prompt",
+    "prompt": "I would like you to please provide me with a very comprehensive and extremely detailed analysis of the current market trends in the technology sector, including detailed insights about artificial intelligence developments, machine learning advancements, and their potential impact on various industries and business models, if you would be so kind as to do so. Additionally, I would appreciate if you could furnish a thorough examination of the multifaceted implications and ramifications of the recent developments in renewable energy technologies, particularly focusing on how these groundbreaking innovations might potentially revolutionize and fundamentally transform the entire landscape of energy production and distribution."
+  },
+  {
+    "name": "research_investigation_prompt",
+    "prompt": "Conduct thorough research on the emerging trends in quantum computing technology, focusing on recent breakthroughs, potential applications, and the timeline for commercial adoption, while also considering the broader implications for cybersecurity and data protection methodologies. Please provide a comprehensive explanation of the fundamental principles of blockchain technology, describe its applications beyond cryptocurrency, and discuss the challenges and opportunities it presents for modern businesses in various industries. Furthermore, I would appreciate if you could analyze the current state of cloud computing infrastructure and its evolution towards edge computing and distributed systems."
+  },
+  {
+    "name": "market_analysis_prompt",
+    "prompt": "Please provide a comprehensive analysis of the current market trends in the technology sector, including detailed insights about artificial intelligence developments, machine learning advancements, and their potential impact on various industries and business models. I would also like you to examine the recent developments in semiconductor manufacturing, particularly focusing on the challenges and opportunities presented by the global chip shortage and the race towards smaller nanometer processes. Additionally, please analyze the current state of the electric vehicle market and its intersection with renewable energy technologies."
+  },
+  {
+    "name": "academic_research_prompt",
+    "prompt": "I would appreciate if you could furnish a thorough examination of the multifaceted implications and ramifications of the recent developments in renewable energy technologies, particularly focusing on how these groundbreaking innovations might potentially revolutionize and fundamentally transform the entire landscape of energy production and distribution. Furthermore, please conduct an in-depth analysis of the current state of artificial intelligence research, including recent breakthroughs in natural language processing, computer vision, and autonomous systems, while also considering the ethical implications and societal impact of these rapidly advancing technologies."
+  },
+  {
+    "name": "business_strategy_prompt",
+    "prompt": "Please provide a comprehensive business strategy analysis for technology companies in the current market environment, including detailed insights about competitive positioning, market opportunities, and strategic recommendations for growth and sustainability. I would also like you to examine the impact of emerging technologies such as artificial intelligence, machine learning, and blockchain on business models and competitive dynamics, while also considering the challenges and opportunities presented by digital transformation initiatives and the evolving regulatory landscape."
+  }
+] 

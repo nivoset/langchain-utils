@@ -18,6 +18,17 @@ interface BatchErrorResult {
 
 type BatchResultType = BatchResult | BatchErrorResult;
 
+interface CompareResult extends OptimizationResult {
+  strategy: string;
+}
+
+interface CompareErrorResult {
+  strategy: string;
+  error: string;
+}
+
+type CompareResultType = CompareResult | CompareErrorResult;
+
 dotenv.config();
 
 const program = new Command();
@@ -195,7 +206,7 @@ program
       console.log(`📝 Found ${prompts.length} prompts to optimize\n`);
       
       const optimizer = new PromptOptimizerService();
-      const results = [];
+      const results: BatchResultType[] = [];
       
       for (let i = 0; i < prompts.length; i++) {
         const prompt = prompts[i];
@@ -208,27 +219,29 @@ program
             parseFloat(options.similarity)
           );
           
-          results.push({
+          const batchResult: BatchResult = {
             index: i + 1,
-            originalPrompt: prompt,
             ...result
-          });
+          };
+          
+          results.push(batchResult);
           
           console.log(`   ✅ Reduced tokens by ${result.tokenReductionPercentage.toFixed(1)}% (similarity: ${(result.similarityScore * 100).toFixed(1)}%)`);
           
         } catch (error) {
           console.log(`   ❌ Failed to optimize prompt ${i + 1}: ${error}`);
-          results.push({
+          const errorResult: BatchErrorResult = {
             index: i + 1,
             originalPrompt: prompt,
             error: error instanceof Error ? error.message : String(error)
-          });
+          };
+          results.push(errorResult);
         }
       }
       
       console.log('\n📊 Batch Optimization Summary:');
-      const successfulResults = results.filter(r => !r.error);
-      const failedResults = results.filter(r => r.error);
+      const successfulResults = results.filter((r): r is BatchResult => !('error' in r));
+      const failedResults = results.filter((r): r is BatchErrorResult => 'error' in r);
       
       if (successfulResults.length > 0) {
         const avgReduction = successfulResults.reduce((sum, r) => sum + r.tokenReductionPercentage, 0) / successfulResults.length;
@@ -328,6 +341,95 @@ program
     }
   });
 
+// Generate minified drift prompts
+program
+  .command('minify-drift')
+  .description('Generate shorter, more concise prompt variations while maintaining semantic similarity')
+  .argument('<prompt>', 'The prompt to generate minified variations for')
+  .option('-n, --number <count>', 'Number of variations to generate', '5')
+  .option('-s, --similarity <score>', 'Minimum similarity threshold (0.0-1.0)', '0.8')
+  .option('-r, --reduction <percentage>', 'Target token reduction percentage (0-70)', '30')
+  .option('-o, --output <file>', 'Output file for minified drift prompts (JSON format)')
+  .option('-v, --verbose', 'Show detailed variation information')
+  .action(async (prompt: string, options: any) => {
+    try {
+      console.log('📝 Generating Minified Drift Prompts...\n');
+      
+      const optimizer = new PromptOptimizerService();
+      
+      console.log('📝 Original Prompt:');
+      console.log(`"${prompt}"\n`);
+      
+      const startTime = Date.now();
+      
+      const driftPrompts = await optimizer.generateMinifiedDriftPrompts(
+        prompt,
+        parseInt(options.number),
+        parseFloat(options.similarity),
+        parseFloat(options.reduction) / 100
+      );
+      
+      const processingTime = Date.now() - startTime;
+      
+      console.log(`✅ Generated ${driftPrompts.length} minified drift prompts!\n`);
+      
+      console.log('📊 Minified Drift Prompt Variations:');
+      driftPrompts.forEach((drift, index) => {
+        const originalTokens = Math.ceil(prompt.length / 4);
+        const variationTokens = Math.ceil(drift.variation.length / 4);
+        const tokenReduction = ((originalTokens - variationTokens) / originalTokens) * 100;
+        
+        console.log(`\n   Variation ${index + 1} (${drift.variationType}):`);
+        console.log(`   Similarity: ${(drift.similarity * 100).toFixed(1)}%`);
+        console.log(`   Token reduction: ${tokenReduction.toFixed(1)}%`);
+        console.log(`   Description: ${drift.description}`);
+        console.log(`   Text: "${drift.variation}"`);
+        
+        if (options.verbose) {
+          console.log(`   Original tokens: ${originalTokens}`);
+          console.log(`   Variation tokens: ${variationTokens}`);
+          console.log(`   Tokens saved: ${originalTokens - variationTokens}`);
+        }
+      });
+      
+      console.log(`\n📈 Summary:`);
+      console.log(`   Total variations: ${driftPrompts.length}`);
+      console.log(`   Average similarity: ${(driftPrompts.reduce((sum, dp) => sum + dp.similarity, 0) / driftPrompts.length * 100).toFixed(1)}%`);
+      
+      if (driftPrompts.length > 0) {
+        const avgTokenReduction = driftPrompts.reduce((sum, dp) => {
+          const originalTokens = Math.ceil(prompt.length / 4);
+          const variationTokens = Math.ceil(dp.variation.length / 4);
+          return sum + ((originalTokens - variationTokens) / originalTokens);
+        }, 0) / driftPrompts.length * 100;
+        console.log(`   Average token reduction: ${avgTokenReduction.toFixed(1)}%`);
+      }
+      
+      console.log(`   Processing time: ${processingTime}ms`);
+      
+      // Save to file if requested
+      if (options.output) {
+        const outputData = {
+          originalPrompt: prompt,
+          driftPrompts,
+          processingTime,
+          options: {
+            numVariations: options.number,
+            minSimilarity: options.similarity,
+            targetReduction: options.reduction
+          }
+        };
+        
+        await fs.writeFile(options.output, JSON.stringify(outputData, null, 2));
+        console.log(`\n💾 Minified drift prompts saved to: ${options.output}`);
+      }
+      
+    } catch (error) {
+      console.error('❌ Error:', error);
+      process.exit(1);
+    }
+  });
+
 // Compare optimization strategies
 program
   .command('compare')
@@ -350,7 +452,7 @@ program
         { name: 'Very Aggressive (70% reduction)', reduction: 0.7, similarity: 0.65 }
       ];
       
-      const results = [];
+      const results: CompareResultType[] = [];
       
       for (const strategy of strategies) {
         console.log(`🔧 Testing: ${strategy.name}`);
@@ -362,20 +464,23 @@ program
             strategy.similarity
           );
           
-          results.push({
+          const compareResult: CompareResult = {
             strategy: strategy.name,
             ...result
-          });
+          };
+          
+          results.push(compareResult);
           
           console.log(`   ✅ Tokens: ${result.optimizedTokens} (${result.tokenReductionPercentage.toFixed(1)}% reduction)`);
           console.log(`   ✅ Similarity: ${(result.similarityScore * 100).toFixed(1)}%`);
           
         } catch (error) {
           console.log(`   ❌ Failed: ${error}`);
-          results.push({
+          const errorResult: CompareErrorResult = {
             strategy: strategy.name,
             error: error instanceof Error ? error.message : String(error)
-          });
+          };
+          results.push(errorResult);
         }
       }
       
@@ -384,7 +489,7 @@ program
       console.log('-'.repeat(70));
       
       results.forEach(result => {
-        if (!result.error) {
+        if (!('error' in result)) {
           const strategy = result.strategy.padEnd(30);
           const tokens = result.optimizedTokens.toString().padEnd(10);
           const reduction = `${result.tokenReductionPercentage.toFixed(1)}%`.padEnd(12);

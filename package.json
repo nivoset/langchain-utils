@@ -62,7 +62,22 @@
     "prompt-optimizer:analyze": "tsx src/cli/prompt-optimizer.ts analyze",
     "prompt-optimizer:batch": "tsx src/cli/prompt-optimizer.ts batch",
     "prompt-optimizer:compare": "tsx src/cli/prompt-optimizer.ts compare",
-    "test:prompt-optimization": "tsx test-prompt-optimization.ts"
+    "prompt-optimizer:drift": "tsx src/cli/prompt-optimizer.ts drift",
+    "prompt-optimizer:minify-drift": "tsx src/cli/prompt-optimizer.ts minify-drift",
+    "baseline-optimizer": "tsx src/cli/prompt-baseline-optimizer.ts",
+    "baseline-optimizer:optimize": "tsx src/cli/prompt-baseline-optimizer.ts optimize",
+    "baseline-optimizer:compare": "tsx src/cli/prompt-baseline-optimizer.ts compare",
+    "baseline-optimizer:batch": "tsx src/cli/prompt-baseline-optimizer.ts batch",
+    "baseline-optimizer:minify": "tsx src/cli/prompt-baseline-optimizer.ts minify",
+    "genetic-optimizer": "tsx src/cli/genetic-prompt-optimizer.ts",
+    "genetic-optimizer:optimize": "tsx src/cli/genetic-prompt-optimizer.ts optimize",
+    "genetic-optimizer:compare": "tsx src/cli/genetic-prompt-optimizer.ts compare",
+    "genetic-optimizer:batch": "tsx src/cli/genetic-prompt-optimizer.ts batch",
+    "test:prompt-optimization": "tsx test-prompt-optimization.ts",
+    "test:drift-generation": "tsx test-drift-generation.ts",
+    "test:minified-drift": "tsx test-minified-drift.ts",
+    "test:full-system-drift": "tsx test-full-system-drift.ts",
+    "test:genetic-long": "tsx test-genetic-long-prompt.ts"
   },
   "dependencies": {
     "@atproto/api": "^0.8.0",

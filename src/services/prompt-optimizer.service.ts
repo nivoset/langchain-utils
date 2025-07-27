@@ -567,6 +567,453 @@ export class PromptOptimizerService {
   }
 
   /**
+   * Generate minified drift prompts - shorter, more concise variations
+   */
+  async generateMinifiedDriftPrompts(
+    prompt: string,
+    numVariations: number = 5,
+    minSimilarity: number = 0.8,
+    targetReduction: number = 0.3 // Target 30% reduction
+  ): Promise<DriftPrompt[]> {
+    const startTime = Date.now();
+    
+    // Generate embedding for original prompt
+    this.originalEmbedding = await generateEmbedding(prompt);
+    if (!this.originalEmbedding) {
+      throw new Error('Failed to generate embedding for original prompt');
+    }
+
+    const driftPrompts: DriftPrompt[] = [];
+    const minificationStrategies = [
+      {
+        name: 'concise_synonyms',
+        description: 'Use shorter synonyms and abbreviations',
+        generate: (text: string) => this.applyConciseSynonyms(text)
+      },
+      {
+        name: 'remove_redundancy',
+        description: 'Remove redundant words and phrases',
+        generate: (text: string) => this.applyRedundancyRemoval(text)
+      },
+      {
+        name: 'simplify_structure',
+        description: 'Simplify sentence structure',
+        generate: (text: string) => this.applyStructureSimplification(text)
+      },
+      {
+        name: 'condense_phrases',
+        description: 'Condense long phrases into shorter ones',
+        generate: (text: string) => this.applyPhraseCondensation(text)
+      },
+      {
+        name: 'eliminate_filler',
+        description: 'Eliminate filler words and unnecessary qualifiers',
+        generate: (text: string) => this.applyFillerElimination(text)
+      },
+      {
+        name: 'merge_clauses',
+        description: 'Merge related clauses and sentences',
+        generate: (text: string) => this.applyClauseMerging(text)
+      },
+      {
+        name: 'use_abbreviations',
+        description: 'Use common abbreviations and acronyms',
+        generate: (text: string) => this.applyAbbreviations(text)
+      },
+      {
+        name: 'direct_style',
+        description: 'Convert to more direct, concise style',
+        generate: (text: string) => this.applyDirectStyle(text)
+      }
+    ];
+
+    let attempts = 0;
+    const maxAttempts = numVariations * 15; // More attempts for minification
+
+    while (driftPrompts.length < numVariations && attempts < maxAttempts) {
+      attempts++;
+      
+      // Select a random strategy
+      const strategy = minificationStrategies[Math.floor(Math.random() * minificationStrategies.length)];
+      
+      try {
+        const variation = strategy.generate(prompt);
+        
+        // Skip if too similar to original
+        if (variation.toLowerCase() === prompt.toLowerCase()) {
+          continue;
+        }
+        
+        // Skip if too similar to existing variations
+        const isDuplicate = driftPrompts.some(dp => 
+          dp.variation.toLowerCase() === variation.toLowerCase()
+        );
+        if (isDuplicate) {
+          continue;
+        }
+        
+        // Check if the variation is actually shorter
+        const originalTokens = Math.ceil(prompt.length / 4);
+        const variationTokens = Math.ceil(variation.length / 4);
+        const actualReduction = (originalTokens - variationTokens) / originalTokens;
+        
+        if (actualReduction < targetReduction * 0.5) { // At least 50% of target reduction
+          continue;
+        }
+        
+        // Generate embedding for variation
+        const variationEmbedding = await generateEmbedding(variation);
+        if (!variationEmbedding) {
+          continue;
+        }
+        
+        const similarity = cosineSimilarity(this.originalEmbedding, variationEmbedding);
+        
+        // Check if similarity is acceptable
+        if (similarity >= minSimilarity) {
+          driftPrompts.push({
+            originalPrompt: prompt,
+            variation,
+            similarity,
+            variationType: strategy.name,
+            description: strategy.description
+          });
+        }
+      } catch (error) {
+        console.warn(`Failed to generate minified variation with strategy ${strategy.name}:`, error);
+        continue;
+      }
+    }
+
+    // Sort by token reduction (descending) then by similarity (descending)
+    driftPrompts.sort((a, b) => {
+      const aReduction = (prompt.length - a.variation.length) / prompt.length;
+      const bReduction = (prompt.length - b.variation.length) / prompt.length;
+      
+      if (Math.abs(aReduction - bReduction) < 0.05) {
+        return b.similarity - a.similarity;
+      }
+      return bReduction - aReduction;
+    });
+
+    return driftPrompts;
+  }
+
+  /**
+   * Apply concise synonyms for minification
+   */
+  private applyConciseSynonyms(text: string): string {
+    const conciseMap: Record<string, string[]> = {
+      'comprehensive': ['complete', 'full', 'thorough'],
+      'detailed': ['specific', 'precise', 'exact'],
+      'analysis': ['study', 'review', 'examination'],
+      'investigation': ['study', 'research', 'examination'],
+      'examination': ['review', 'study', 'analysis'],
+      'comprehensive analysis': ['full study', 'complete review', 'thorough examination'],
+      'detailed insights': ['key insights', 'important findings', 'crucial observations'],
+      'artificial intelligence': ['AI', 'machine intelligence'],
+      'machine learning': ['ML', 'statistical learning'],
+      'technology sector': ['tech sector', 'tech industry', 'technology industry'],
+      'business models': ['business approaches', 'commercial strategies'],
+      'various industries': ['different sectors', 'multiple fields', 'diverse areas'],
+      'potential impact': ['possible effect', 'likely influence', 'probable outcome'],
+      'current market trends': ['market trends', 'current trends', 'present patterns'],
+      'developments': ['advances', 'progress', 'innovations'],
+      'advancements': ['progress', 'developments', 'improvements'],
+      'innovations': ['advances', 'breakthroughs', 'developments'],
+      'breakthroughs': ['advances', 'innovations', 'discoveries'],
+      'applications': ['uses', 'implementations', 'deployments'],
+      'methodologies': ['methods', 'approaches', 'techniques'],
+      'frameworks': ['systems', 'structures', 'models'],
+      'strategies': ['plans', 'approaches', 'methods'],
+      'implementations': ['deployments', 'applications', 'uses'],
+      'utilization': ['use', 'application', 'employment'],
+      'comprehensive understanding': ['full understanding', 'complete knowledge'],
+      'thorough examination': ['detailed review', 'careful study'],
+      'extensive research': ['in-depth study', 'detailed investigation'],
+      'in-depth analysis': ['detailed study', 'thorough examination'],
+      'comprehensive overview': ['complete summary', 'full picture'],
+      'detailed explanation': ['clear explanation', 'precise description'],
+      'thorough investigation': ['careful study', 'detailed research']
+    };
+
+    let result = text;
+    
+    // Apply concise synonyms
+    for (const [longForm, shortForms] of Object.entries(conciseMap)) {
+      if (Math.random() < 0.6) { // 60% chance to apply each replacement
+        const shortForm = shortForms[Math.floor(Math.random() * shortForms.length)];
+        const regex = new RegExp(`\\b${longForm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'gi');
+        result = result.replace(regex, shortForm);
+      }
+    }
+
+    return result.replace(/\s+/g, ' ').trim();
+  }
+
+  /**
+   * Apply redundancy removal for minification
+   */
+  private applyRedundancyRemoval(text: string): string {
+    const redundantPatterns = [
+      // Remove redundant adjectives
+      { pattern: /\b(very|extremely|absolutely|completely)\s+(comprehensive|thorough|detailed)\b/gi, replacement: '$2' },
+      { pattern: /\b(really|quite|fairly)\s+(good|important|significant)\b/gi, replacement: '$2' },
+      
+      // Remove redundant phrases
+      { pattern: /\b(current|present)\s+(market|industry|sector)\s+trends\b/gi, replacement: 'market trends' },
+      { pattern: /\b(modern|contemporary)\s+(technology|business|industry)\b/gi, replacement: '$2' },
+      { pattern: /\b(advanced|sophisticated)\s+(technology|systems|methods)\b/gi, replacement: '$2' },
+      
+      // Remove unnecessary qualifiers
+      { pattern: /\b(potentially|possibly|likely)\s+(important|significant|crucial)\b/gi, replacement: '$2' },
+      { pattern: /\b(relatively|comparatively)\s+(new|recent|modern)\b/gi, replacement: '$2' },
+      
+      // Remove redundant descriptions
+      { pattern: /\b(technology|business)\s+sector\s+and\s+industry\b/gi, replacement: '$1 sector' },
+      { pattern: /\b(methods|approaches)\s+and\s+techniques\b/gi, replacement: 'methods' },
+      { pattern: /\b(applications|uses)\s+and\s+implementations\b/gi, replacement: 'applications' },
+      
+      // Remove repetitive words
+      { pattern: /\b(analysis|study|research)\s+and\s+(analysis|study|research)\b/gi, replacement: '$1' },
+      { pattern: /\b(development|progress)\s+and\s+(development|progress)\b/gi, replacement: '$1' },
+      { pattern: /\b(innovation|advancement)\s+and\s+(innovation|advancement)\b/gi, replacement: '$1' }
+    ];
+
+    let result = text;
+    redundantPatterns.forEach(({ pattern, replacement }) => {
+      result = result.replace(pattern, replacement);
+    });
+
+    return result.replace(/\s+/g, ' ').trim();
+  }
+
+  /**
+   * Apply structure simplification for minification
+   */
+  private applyStructureSimplification(text: string): string {
+    const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 0);
+    
+    const simplified = sentences.map(sentence => {
+      let simplified = sentence.trim();
+      
+      // Remove unnecessary clauses
+      simplified = simplified.replace(/\b(which is|that is|who is|where is)\b/gi, '');
+      simplified = simplified.replace(/\b(which are|that are|who are|where are)\b/gi, '');
+      
+      // Simplify complex conjunctions
+      simplified = simplified.replace(/\b(in order to|so as to)\b/gi, 'to');
+      simplified = simplified.replace(/\b(due to the fact that|because of the fact that)\b/gi, 'because');
+      simplified = simplified.replace(/\b(at this point in time|at the present time)\b/gi, 'now');
+      simplified = simplified.replace(/\b(in the event that|if and when)\b/gi, 'if');
+      
+      // Remove unnecessary prepositions
+      simplified = simplified.replace(/\b(prior to|subsequent to)\b/gi, 'before');
+      simplified = simplified.replace(/\b(regarding|concerning|with respect to)\b/gi, 'about');
+      
+      // Simplify passive voice
+      simplified = simplified.replace(/\b(is being|are being|was being|were being)\b/gi, 'is');
+      simplified = simplified.replace(/\b(has been|have been|had been)\b/gi, 'is');
+      
+      return simplified;
+    });
+
+    return simplified.join('. ').replace(/\s+/g, ' ').trim();
+  }
+
+  /**
+   * Apply phrase condensation for minification
+   */
+  private applyPhraseCondensation(text: string): string {
+    const condensationMap = [
+      { pattern: /\b(comprehensive analysis of)\b/gi, replacement: 'analysis of' },
+      { pattern: /\b(detailed insights about)\b/gi, replacement: 'insights on' },
+      { pattern: /\b(thorough examination of)\b/gi, replacement: 'examination of' },
+      { pattern: /\b(extensive research on)\b/gi, replacement: 'research on' },
+      { pattern: /\b(in-depth study of)\b/gi, replacement: 'study of' },
+      { pattern: /\b(comprehensive understanding of)\b/gi, replacement: 'understanding of' },
+      { pattern: /\b(detailed explanation of)\b/gi, replacement: 'explanation of' },
+      { pattern: /\b(thorough investigation of)\b/gi, replacement: 'investigation of' },
+      { pattern: /\b(comprehensive overview of)\b/gi, replacement: 'overview of' },
+      { pattern: /\b(artificial intelligence developments)\b/gi, replacement: 'AI developments' },
+      { pattern: /\b(machine learning advancements)\b/gi, replacement: 'ML advancements' },
+      { pattern: /\b(technology sector)\b/gi, replacement: 'tech sector' },
+      { pattern: /\b(business models)\b/gi, replacement: 'business approaches' },
+      { pattern: /\b(various industries)\b/gi, replacement: 'different sectors' },
+      { pattern: /\b(potential impact)\b/gi, replacement: 'impact' },
+      { pattern: /\b(current market trends)\b/gi, replacement: 'market trends' },
+      { pattern: /\b(modern businesses)\b/gi, replacement: 'businesses' },
+      { pattern: /\b(contemporary technology)\b/gi, replacement: 'technology' },
+      { pattern: /\b(advanced systems)\b/gi, replacement: 'systems' },
+      { pattern: /\b(sophisticated methods)\b/gi, replacement: 'methods' }
+    ];
+
+    let result = text;
+    condensationMap.forEach(({ pattern, replacement }) => {
+      result = result.replace(pattern, replacement);
+    });
+
+    return result.replace(/\s+/g, ' ').trim();
+  }
+
+  /**
+   * Apply filler elimination for minification
+   */
+  private applyFillerElimination(text: string): string {
+    const fillerWords = [
+      /\b(very|really|quite|extremely|absolutely|completely|totally|entirely)\b/gi,
+      /\b(just|simply|merely|only|simply)\b/gi,
+      /\b(actually|basically|essentially|fundamentally)\b/gi,
+      /\b(like|sort of|kind of|type of)\b/gi,
+      /\b(you know|i mean|well|so|um|uh)\b/gi,
+      /\b(somewhat|slightly|moderately|fairly|reasonably)\b/gi,
+      /\b(almost|nearly|approximately|roughly|about)\b/gi,
+      /\b(potentially|possibly|maybe|perhaps|might)\b/gi,
+      /\b(generally|usually|typically|normally)\b/gi,
+      /\b(relatively|comparatively|relatively speaking)\b/gi,
+      /\b(important|significant|crucial|vital|essential)\b/gi, // Remove redundant importance indicators
+      /\b(key|main|primary|principal|major)\b/gi, // Remove redundant primary indicators
+      /\b(innovative|revolutionary|groundbreaking|cutting-edge)\b/gi, // Remove redundant innovation indicators
+      /\b(comprehensive|thorough|extensive|detailed|complete)\b/gi, // Remove redundant comprehensive indicators
+      /\b(advanced|sophisticated|complex|elaborate)\b/gi // Remove redundant advanced indicators
+    ];
+
+    let result = text;
+    fillerWords.forEach(pattern => {
+      result = result.replace(pattern, '');
+    });
+
+    return result.replace(/\s+/g, ' ').trim();
+  }
+
+  /**
+   * Apply clause merging for minification
+   */
+  private applyClauseMerging(text: string): string {
+    const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 0);
+    
+    if (sentences.length < 2) return text;
+    
+    const merged: string[] = [];
+    let i = 0;
+    
+    while (i < sentences.length) {
+      const current = sentences[i].trim();
+      
+      if (i + 1 < sentences.length) {
+        const next = sentences[i + 1].trim();
+        
+        // Check if sentences can be merged (simple heuristic)
+        const currentWords = current.toLowerCase().split(/\s+/);
+        const nextWords = next.toLowerCase().split(/\s+/);
+        const commonWords = currentWords.filter(word => nextWords.includes(word));
+        
+        // More aggressive merging for minification
+        if (commonWords.length >= 1 && current.length + next.length < 120) {
+          // Merge sentences with shorter connectors
+          const connector = Math.random() < 0.5 ? ' and ' : ', ';
+          merged.push(`${current}${connector}${next}`);
+          i += 2;
+        } else {
+          merged.push(current);
+          i++;
+        }
+      } else {
+        merged.push(current);
+        i++;
+      }
+    }
+    
+    return merged.join('. ').replace(/\s+/g, ' ').trim();
+  }
+
+  /**
+   * Apply abbreviations for minification
+   */
+  private applyAbbreviations(text: string): string {
+    const abbreviationMap = [
+      { pattern: /\b(artificial intelligence)\b/gi, replacement: 'AI' },
+      { pattern: /\b(machine learning)\b/gi, replacement: 'ML' },
+      { pattern: /\b(deep learning)\b/gi, replacement: 'DL' },
+      { pattern: /\b(natural language processing)\b/gi, replacement: 'NLP' },
+      { pattern: /\b(application programming interface)\b/gi, replacement: 'API' },
+      { pattern: /\b(user interface)\b/gi, replacement: 'UI' },
+      { pattern: /\b(user experience)\b/gi, replacement: 'UX' },
+      { pattern: /\b(software as a service)\b/gi, replacement: 'SaaS' },
+      { pattern: /\b(infrastructure as a service)\b/gi, replacement: 'IaaS' },
+      { pattern: /\b(platform as a service)\b/gi, replacement: 'PaaS' },
+      { pattern: /\b(chief executive officer)\b/gi, replacement: 'CEO' },
+      { pattern: /\b(chief financial officer)\b/gi, replacement: 'CFO' },
+      { pattern: /\b(chief technology officer)\b/gi, replacement: 'CTO' },
+      { pattern: /\b(chief operating officer)\b/gi, replacement: 'COO' },
+      { pattern: /\b(public relations)\b/gi, replacement: 'PR' },
+      { pattern: /\b(human resources)\b/gi, replacement: 'HR' },
+      { pattern: /\b(information technology)\b/gi, replacement: 'IT' },
+      { pattern: /\b(business to business)\b/gi, replacement: 'B2B' },
+      { pattern: /\b(business to consumer)\b/gi, replacement: 'B2C' },
+      { pattern: /\b(return on investment)\b/gi, replacement: 'ROI' },
+      { pattern: /\b(key performance indicator)\b/gi, replacement: 'KPI' },
+      { pattern: /\b(technology)\b/gi, replacement: 'tech' },
+      { pattern: /\b(industry)\b/gi, replacement: 'sector' },
+      { pattern: /\b(application)\b/gi, replacement: 'app' },
+      { pattern: /\b(development)\b/gi, replacement: 'dev' },
+      { pattern: /\b(implementation)\b/gi, replacement: 'deployment' },
+      { pattern: /\b(methodology)\b/gi, replacement: 'method' },
+      { pattern: /\b(framework)\b/gi, replacement: 'system' }
+    ];
+
+    let result = text;
+    abbreviationMap.forEach(({ pattern, replacement }) => {
+      result = result.replace(pattern, replacement);
+    });
+
+    return result.replace(/\s+/g, ' ').trim();
+  }
+
+  /**
+   * Apply direct style for minification
+   */
+  private applyDirectStyle(text: string): string {
+    const directStyleMap = [
+      // Remove polite phrases
+      { pattern: /\b(please|kindly)\s+/gi, replacement: '' },
+      { pattern: /\b(I would like you to|I would appreciate if you could)\s+/gi, replacement: '' },
+      { pattern: /\b(It would be helpful if you could|Could you please)\s+/gi, replacement: '' },
+      
+      // Make requests more direct
+      { pattern: /\b(provide|give|offer|supply|deliver|present)\b/gi, replacement: 'show' },
+      { pattern: /\b(conduct|perform|execute|carry out)\b/gi, replacement: 'do' },
+      { pattern: /\b(explain|describe|elucidate|clarify)\b/gi, replacement: 'show' },
+      { pattern: /\b(analyze|examine|investigate|study)\b/gi, replacement: 'review' },
+      
+      // Remove unnecessary qualifiers
+      { pattern: /\b(comprehensive|thorough|extensive|detailed)\s+/gi, replacement: '' },
+      { pattern: /\b(important|significant|crucial|vital)\s+/gi, replacement: '' },
+      { pattern: /\b(key|main|primary|principal)\s+/gi, replacement: '' },
+      
+      // Simplify complex phrases
+      { pattern: /\b(comprehensive analysis)\b/gi, replacement: 'analysis' },
+      { pattern: /\b(detailed insights)\b/gi, replacement: 'insights' },
+      { pattern: /\b(thorough examination)\b/gi, replacement: 'examination' },
+      { pattern: /\b(extensive research)\b/gi, replacement: 'research' },
+      { pattern: /\b(in-depth study)\b/gi, replacement: 'study' },
+      
+      // Remove redundant words
+      { pattern: /\b(current|present)\s+/gi, replacement: '' },
+      { pattern: /\b(modern|contemporary)\s+/gi, replacement: '' },
+      { pattern: /\b(advanced|sophisticated)\s+/gi, replacement: '' },
+      { pattern: /\b(innovative|revolutionary)\s+/gi, replacement: '' }
+    ];
+
+    let result = text;
+    directStyleMap.forEach(({ pattern, replacement }) => {
+      result = result.replace(pattern, replacement);
+    });
+
+    return result.replace(/\s+/g, ' ').trim();
+  }
+
+  /**
    * Apply synonym variations to the prompt
    */
   private applySynonymVariations(text: string): string {
