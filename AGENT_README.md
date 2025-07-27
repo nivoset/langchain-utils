@@ -146,6 +146,9 @@ npm run test:two-stage
 
 # Test the improved strict filtering
 npm run test:filtering
+
+# Test the question enhancement
+npm run test:enhancement
 ```
 
 This will test:
@@ -155,9 +158,15 @@ This will test:
 - Vector store statistics
 - Two-stage processing workflow
 
-## 🔍 Smart Filtering
+## 🔍 Smart Filtering & Question Enhancement
 
-The agent now includes intelligent filtering that automatically removes irrelevant articles:
+The agent now includes intelligent filtering and question enhancement to improve search accuracy:
+
+### **How Question Enhancement Works:**
+1. **Question Analysis**: The original question is analyzed and enhanced
+2. **Keyword Addition**: Relevant keywords and terms are added
+3. **Specificity Improvement**: Vague questions are made more specific
+4. **Context Addition**: Additional context helps find more relevant articles
 
 ### **How Filtering Works:**
 1. **Individual Analysis**: Each article is analyzed to determine relevance
@@ -177,6 +186,12 @@ The agent now includes intelligent filtering that automatically removes irreleva
   - Articles that only briefly mention the topic
   - Articles about unrelated subjects (e.g., Unicode emoji for AI question)
   - Articles with tangential connections
+
+### **Example Question Enhancement:**
+```
+🤔 Processing question: "what new usecases for llm have shown up?"
+🔍 Enhanced question: "What are the latest practical applications and business use cases for Large Language Models (LLMs) in software development, content creation, and enterprise solutions?"
+```
 
 ### **Example Filtering Output:**
 ```

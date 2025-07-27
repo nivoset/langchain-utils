@@ -44,6 +44,7 @@ export class AgentService {
   private model: ChatOllama;
   private individualAnalysisPrompt: PromptTemplate;
   private synthesisPrompt: PromptTemplate;
+  private questionEnhancementPrompt: PromptTemplate;
 
   constructor() {
     this.vectorStoreService = new VectorStoreService();
@@ -118,6 +119,28 @@ Instructions:
 7. Provide a well-structured, informative response
 
 Synthesized Answer: `);
+
+    // Prompt for enhancing questions to improve search accuracy
+    this.questionEnhancementPrompt = PromptTemplate.fromTemplate(`
+You are an expert at improving search queries to find more relevant and accurate information.
+
+Original Question: {originalQuestion}
+
+Your task is to enhance this question to:
+1. Make it more specific and detailed
+2. Include relevant keywords and terms
+3. Clarify the intent and scope
+4. Add context that will help find the most relevant articles
+5. Focus on concrete, actionable information rather than vague concepts
+
+Guidelines:
+- If the question is about technology, include specific technology names, companies, or technical terms
+- If asking about "new use cases", specify what kind of use cases (business, technical, consumer, etc.)
+- If asking about developments, specify what type (product launches, research breakthroughs, market changes, etc.)
+- Keep the enhanced question clear and focused
+- Don't make it too long (max 2-3 sentences)
+
+Enhanced Question: `);
   }
 
   /**
@@ -141,9 +164,12 @@ Synthesized Answer: `);
     try {
       console.log(`🤔 Processing question: "${question}"`);
       
-      // Search for relevant documents
+      // Preprocess and enhance the question for better search
+      const enhancedQuestion = await this.enhanceQuestion(question);
+      console.log(`🔍 Enhanced question: "${enhancedQuestion}"`);
       console.log('🔍 Searching for relevant articles...');
-      const searchResults = await this.vectorStoreService.searchSimilarArticles(question, maxDocuments);
+      
+      const searchResults = await this.vectorStoreService.searchSimilarArticles(enhancedQuestion, maxDocuments);
       
       if (searchResults.length === 0) {
         return {
@@ -210,7 +236,7 @@ Try lowering the threshold (e.g., --threshold ${Math.max(0.1, similarityThreshol
         console.log(`  📄 Analyzing article ${i + 1}/${relevantResults.length}: "${document.metadata.title}"`);
         
         try {
-          const analysis = await this.analyzeIndividualArticle(document, question);
+          const analysis = await this.analyzeIndividualArticle(document, enhancedQuestion);
           individualAnalyses.push(analysis);
           
           if (analysis.isRelevant) {
@@ -256,7 +282,7 @@ Try lowering the threshold (e.g., --threshold ${Math.max(0.1, similarityThreshol
       ]);
 
       const answer = await synthesisChain.invoke({
-        question: question,
+        question: enhancedQuestion,
         individualAnalyses: relevantAnalyses.map(analysis => analysis.analysis).join('\n\n---\n\n')
       });
 
@@ -277,7 +303,7 @@ Try lowering the threshold (e.g., --threshold ${Math.max(0.1, similarityThreshol
         answer: answer.trim(),
         sources: sources,
         metadata: {
-          query: question,
+          query: `${question} (enhanced: ${enhancedQuestion})`,
           documentsRetrieved: relevantResults.length,
           processingTime: processingTime,
           relevantDocuments: relevantAnalyses.length,
@@ -625,6 +651,28 @@ Synthesized Summary: `);
       document,
       relevance
     };
+  }
+
+  /**
+   * Enhance a question to improve search accuracy
+   */
+  private async enhanceQuestion(originalQuestion: string): Promise<string> {
+    try {
+      const enhancementChain = RunnableSequence.from([
+        this.questionEnhancementPrompt,
+        this.model,
+        new StringOutputParser()
+      ]);
+
+      const enhancedQuestion = await enhancementChain.invoke({
+        originalQuestion: originalQuestion
+      });
+
+      return enhancedQuestion.trim();
+    } catch (error) {
+      console.warn('⚠️ Failed to enhance question, using original:', error);
+      return originalQuestion;
+    }
   }
 
   /**

@@ -55,7 +55,8 @@
     "agent:chat": "tsx src/cli/agent.ts chat",
     "agent:stats": "tsx src/cli/agent.ts stats",
     "test:two-stage": "tsx test-two-stage-agent.ts",
-    "test:filtering": "tsx test-strict-filtering.ts"
+    "test:filtering": "tsx test-strict-filtering.ts",
+    "test:enhancement": "tsx test-question-enhancement.ts"
   },
   "dependencies": {
     "@atproto/api": "^0.8.0",
