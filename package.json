@@ -56,7 +56,13 @@
     "agent:stats": "tsx src/cli/agent.ts stats",
     "test:two-stage": "tsx test-two-stage-agent.ts",
     "test:filtering": "tsx test-strict-filtering.ts",
-    "test:enhancement": "tsx test-question-enhancement.ts"
+    "test:enhancement": "tsx test-question-enhancement.ts",
+    "prompt-optimizer": "tsx src/cli/prompt-optimizer.ts",
+    "prompt-optimizer:optimize": "tsx src/cli/prompt-optimizer.ts optimize",
+    "prompt-optimizer:analyze": "tsx src/cli/prompt-optimizer.ts analyze",
+    "prompt-optimizer:batch": "tsx src/cli/prompt-optimizer.ts batch",
+    "prompt-optimizer:compare": "tsx src/cli/prompt-optimizer.ts compare",
+    "test:prompt-optimization": "tsx test-prompt-optimization.ts"
   },
   "dependencies": {
     "@atproto/api": "^0.8.0",
