@@ -50,10 +50,21 @@
     "vectorstore:stats": "tsx src/vectorstore.ts stats",
     "vectorstore:cleanup": "tsx src/vectorstore.ts cleanup",
     "vectorstore:duplicates": "tsx src/vectorstore.ts duplicates",
-    "vectorstore:dedupe": "tsx src/vectorstore.ts dedupe"
+    "vectorstore:dedupe": "tsx src/vectorstore.ts dedupe",
+    "vec": "tsx test.ts",
+    "agent": "tsx src/cli/agent.ts",
+    "agent:ask": "tsx src/cli/agent.ts ask",
+    "agent:company": "tsx src/cli/agent.ts company",
+    "agent:sentiment": "tsx src/cli/agent.ts sentiment",
+    "agent:chat": "tsx src/cli/agent.ts chat",
+    "agent:stats": "tsx src/cli/agent.ts stats",
+    "test:agent": "tsx test-agent.ts",
+    "remove:aiwire": "tsx remove-aiwire-feeds.ts",
+    "test:rss": "tsx test-rss-feeds.ts"
   },
   "dependencies": {
     "@atproto/api": "^0.8.0",
+    "@langchain/community": "^0.2.0",
     "@langchain/core": "^0.3.0",
     "@langchain/ollama": "^0.2.0",
     "@libsql/client": "^0.5.0",

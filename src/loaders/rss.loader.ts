@@ -1,7 +1,8 @@
 import { BaseDocumentLoader } from 'langchain/document_loaders/base';
 import { Document } from 'langchain/document';
 import Parser from 'rss-parser';
-import { client } from '../database/init.js';
+import { client, initDatabase } from '../database/init.js';
+import * as cheerio from 'cheerio';
 
 export interface RSSFeedConfig {
   name: string;
@@ -10,6 +11,7 @@ export interface RSSFeedConfig {
   maxItems?: number;
   timeout?: number;
   stopAtDuplicate?: boolean; // Stop processing at first duplicate
+  fetchFullContent?: boolean; // Fetch full article content from URLs
 }
 
 export interface RSSArticle {
@@ -25,12 +27,11 @@ export interface RSSArticle {
   guid?: string;
 }
 
-/**
- * LangChain RSS Document Loader
- * 
- * Loads RSS feeds and converts them to LangChain Document objects
- * Can optionally save articles to the database
- */
+export interface Document {
+  pageContent: string;
+  metadata: Record<string, any>;
+}
+
 export class RSSLoader extends BaseDocumentLoader {
   private parser: Parser;
   private config: RSSFeedConfig;
@@ -38,116 +39,181 @@ export class RSSLoader extends BaseDocumentLoader {
 
   constructor(config: RSSFeedConfig, saveToDatabase: boolean = false) {
     super();
-    this.config = config;
-    this.saveToDatabase = saveToDatabase;
-    
     this.parser = new Parser({
       timeout: config.timeout || 10000,
       headers: {
-        'User-Agent': 'Mozilla/5.0 (compatible; TechNewsRSS/1.0)'
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
       }
     });
+    this.config = config;
+    this.saveToDatabase = saveToDatabase;
   }
 
-  /**
-   * Load RSS feed and convert to LangChain Documents
-   * Processes from newest to oldest, stopping at first duplicate
-   */
   async load(): Promise<Document[]> {
     try {
-      console.log(`📡 Loading RSS feed: ${this.config.name} (${this.config.url})`);
+      await initDatabase();
       
-      const parsed = await this.parser.parseURL(this.config.url);
-      const documents: Document[] = [];
+      console.log(`📡 Loading RSS feed: ${this.config.name}`);
+      console.log(`🔗 URL: ${this.config.url}`);
+      
+      const feed = await this.parser.parseURL(this.config.url);
+      console.log(`📊 Found ${feed.items.length} items in feed`);
+      
       const articles: RSSArticle[] = [];
-
-      // Sort items by publication date (newest first)
-      const sortedItems = parsed.items.sort((a, b) => {
-        const dateA = a.pubDate ? new Date(a.pubDate).getTime() : 0;
-        const dateB = b.pubDate ? new Date(b.pubDate).getTime() : 0;
-        return dateB - dateA; // Descending order (newest first)
-      });
-
-      // Process RSS items (newest first)
-      const items = this.config.maxItems 
-        ? sortedItems.slice(0, this.config.maxItems)
-        : sortedItems;
-
-      let duplicateCount = 0;
       let processedCount = 0;
-
-      for (const item of items) {
+      
+      for (const item of feed.items.slice(0, this.config.maxItems || 50)) {
         try {
-          const article = this.processRSSItem(item);
+          const article = await this.processRSSItem(item);
           if (article) {
-            // Check if article already exists in database
-            const exists = await this.checkArticleExists(article);
-            
-            if (exists) {
-              console.log(`🔄 Found duplicate: ${article.title}`);
-              duplicateCount++;
-              
-              // Stop processing if we've found a duplicate (all subsequent items are older)
-              if (duplicateCount >= 1 && (this.config.stopAtDuplicate !== false)) {
-                console.log(`⏹️  Stopping at first duplicate - processed ${processedCount} new articles`);
-                break;
-              }
-            } else {
-              articles.push(article);
-              
-              // Convert to LangChain Document
-              const document = this.createDocument(article);
-              documents.push(document);
-              
-              processedCount++;
+            // Check for duplicates if enabled
+            if (this.config.stopAtDuplicate && await this.checkArticleExists(article)) {
+              console.log(`🛑 Stopping at duplicate: ${article.title}`);
+              break;
             }
+            
+            articles.push(article);
+            processedCount++;
+            
+            // Add delay between articles to be respectful
+            await new Promise(resolve => setTimeout(resolve, 500));
           }
         } catch (error) {
-          console.warn(`Error processing RSS item from ${this.config.name}:`, error);
+          console.warn(`Error processing RSS item: ${error}`);
         }
       }
-
+      
+      console.log(`✅ Processed ${processedCount} articles from ${this.config.name}`);
+      
       // Save to database if requested
       if (this.saveToDatabase && articles.length > 0) {
         await this.saveArticlesToDatabase(articles);
       }
-
-      console.log(`✅ Loaded ${documents.length} new documents from ${this.config.name} (${duplicateCount} duplicates skipped)`);
+      
+      // Convert to documents
+      const documents = articles.map(article => this.createDocument(article));
+      
       return documents;
-
+      
     } catch (error) {
-      console.error(`❌ Error loading RSS feed ${this.config.name}:`, error);
+      console.error(`Error loading RSS feed ${this.config.name}:`, error);
       throw error;
     }
   }
 
-  /**
-   * Process individual RSS item into RSSArticle
-   */
-  private processRSSItem(item: any): RSSArticle | null {
-    const content = this.extractContent(item);
-    
-    // Validate article has required fields
-    if (!item.title || !item.link || content.length < 50) {
+  private async processRSSItem(item: any): Promise<RSSArticle | null> {
+    try {
+      // Extract basic content from RSS
+      let content = this.extractContent(item);
+      
+      // If fetchFullContent is enabled and we have a URL, try to get full content
+      if (this.config.fetchFullContent && item.link && content.length < 1000) {
+        try {
+          console.log(`🔍 Fetching full content for: ${item.title}`);
+          const fullContent = await this.fetchFullArticleContent(item.link);
+          if (fullContent && fullContent.length > content.length) {
+            content = fullContent;
+            console.log(`✅ Got full content (${fullContent.length} chars)`);
+          }
+        } catch (error) {
+          console.warn(`Failed to fetch full content for ${item.title}: ${error}`);
+        }
+      }
+
+      const article: RSSArticle = {
+        title: item.title || 'Untitled',
+        content: content,
+        url: item.link || '',
+        source: this.config.name,
+        publishedAt: item.pubDate ? new Date(item.pubDate) : undefined,
+        author: item.creator || item.author || undefined,
+        category: this.config.category,
+        tags: this.extractTags(item),
+        summary: item.contentSnippet || item.summary || undefined,
+        guid: item.guid || item.id || undefined
+      };
+
+      // Validate article has required fields
+      if (article.title && article.url && article.content.length > 100) {
+        return article;
+      }
+
+      return null;
+    } catch (error) {
+      console.warn(`Error processing RSS item: ${error}`);
       return null;
     }
-
-    return {
-      title: item.title,
-      content: content,
-      url: item.link,
-      source: this.config.name,
-      publishedAt: item.pubDate ? new Date(item.pubDate) : undefined,
-      author: item.creator || item.author || undefined,
-      category: this.config.category,
-      tags: this.extractTags(item),
-      summary: item.contentSnippet || item.summary || undefined,
-      guid: item.guid || item.id || undefined
-    };
   }
 
   /**
-   * Create LangChain Document from RSSArticle
+   * Fetch full article content from the article URL
+   */
+  private async fetchFullArticleContent(url: string): Promise<string | null> {
+    try {
+      const response = await fetch(url, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+        },
+        timeout: this.config.timeout || 10000
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const html = await response.text();
+      const $ = cheerio.load(html);
+
+      // Common selectors for article content
+      const contentSelectors = [
+        'article .content',
+        'article .post-content',
+        'article .entry-content',
+        '.article-content',
+        '.post-content',
+        '.entry-content',
+        '.content-body',
+        '.article-body',
+        'main article',
+        'article',
+        '.content',
+        '#content',
+        '.post',
+        '.article'
+      ];
+
+      let content = '';
+      
+      // Try each selector
+      for (const selector of contentSelectors) {
+        const element = $(selector);
+        if (element.length > 0) {
+          // Remove unwanted elements
+          element.find('script, style, nav, header, footer, .ad, .advertisement, .sidebar, .comments').remove();
+          
+          content = element.text().trim();
+          if (content.length > 500) {
+            break;
+          }
+        }
+      }
+
+      // If no content found with selectors, try to get all text from body
+      if (content.length < 500) {
+        $('script, style, nav, header, footer, .ad, .advertisement, .sidebar, .comments').remove();
+        content = $('body').text().trim();
+      }
+
+      return content.length > 500 ? this.cleanContent(content) : null;
+
+    } catch (error) {
+      console.warn(`Failed to fetch content from ${url}: ${error}`);
+      return null;
+    }
+  }
+
+  /**
+   * Create Document from RSSArticle
    */
   private createDocument(article: RSSArticle): Document {
     const metadata = {
@@ -163,10 +229,10 @@ export class RSSLoader extends BaseDocumentLoader {
       loader: 'rss'
     };
 
-    return new Document({
+    return {
       pageContent: `${article.title}\n\n${article.content}`,
       metadata
-    });
+    };
   }
 
   /**
@@ -200,8 +266,9 @@ export class RSSLoader extends BaseDocumentLoader {
     // Remove extra whitespace
     const cleaned = withoutHtml.replace(/\s+/g, ' ').trim();
     
-    // Limit length
-    return cleaned.length > 5000 ? cleaned.substring(0, 5000) + '...' : cleaned;
+    // Increase length limit for full content
+    const maxLength = this.config.fetchFullContent ? 15000 : 5000;
+    return cleaned.length > maxLength ? cleaned.substring(0, maxLength) + '...' : cleaned;
   }
 
   /**
@@ -397,7 +464,7 @@ export class RSSLoader extends BaseDocumentLoader {
       return await RSSLoader.loadMultiple(configs, saveToDatabase);
       
     } catch (error) {
-      console.error('Error loading feeds from database:', error);
+      console.error('Error loading RSS feeds from database:', error);
       throw error;
     }
   }

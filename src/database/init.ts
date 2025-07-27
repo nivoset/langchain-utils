@@ -206,67 +206,67 @@ async function initDatabase() {
         args: ['The Next Web RSS', 'https://thenextweb.com/feed/', 'Tech News']
       },
       
-      // AI Wire RSS feeds (15 feeds)
-      {
-        sql: `INSERT OR REPLACE INTO rss_feeds (name, url, category) VALUES (?, ?, ?)`,
-        args: ['AI Wire - AI News', 'https://www.aiwire.net/feed/', 'AI News']
-      },
-      {
-        sql: `INSERT OR REPLACE INTO rss_feeds (name, url, category) VALUES (?, ?, ?)`,
-        args: ['AI Wire - Machine Learning', 'https://www.aiwire.net/category/machine-learning/feed/', 'Machine Learning']
-      },
-      {
-        sql: `INSERT OR REPLACE INTO rss_feeds (name, url, category) VALUES (?, ?, ?)`,
-        args: ['AI Wire - Deep Learning', 'https://www.aiwire.net/category/deep-learning/feed/', 'Deep Learning']
-      },
-      {
-        sql: `INSERT OR REPLACE INTO rss_feeds (name, url, category) VALUES (?, ?, ?)`,
-        args: ['AI Wire - Natural Language Processing', 'https://www.aiwire.net/category/natural-language-processing/feed/', 'NLP']
-      },
-      {
-        sql: `INSERT OR REPLACE INTO rss_feeds (name, url, category) VALUES (?, ?, ?)`,
-        args: ['AI Wire - Computer Vision', 'https://www.aiwire.net/category/computer-vision/feed/', 'Computer Vision']
-      },
-      {
-        sql: `INSERT OR REPLACE INTO rss_feeds (name, url, category) VALUES (?, ?, ?)`,
-        args: ['AI Wire - Robotics', 'https://www.aiwire.net/category/robotics/feed/', 'Robotics']
-      },
-      {
-        sql: `INSERT OR REPLACE INTO rss_feeds (name, url, category) VALUES (?, ?, ?)`,
-        args: ['AI Wire - AI Ethics', 'https://www.aiwire.net/category/ai-ethics/feed/', 'AI Ethics']
-      },
-      {
-        sql: `INSERT OR REPLACE INTO rss_feeds (name, url, category) VALUES (?, ?, ?)`,
-        args: ['AI Wire - AI Research', 'https://www.aiwire.net/category/ai-research/feed/', 'AI Research']
-      },
-      {
-        sql: `INSERT OR REPLACE INTO rss_feeds (name, url, category) VALUES (?, ?, ?)`,
-        args: ['AI Wire - AI Applications', 'https://www.aiwire.net/category/ai-applications/feed/', 'AI Applications']
-      },
-      {
-        sql: `INSERT OR REPLACE INTO rss_feeds (name, url, category) VALUES (?, ?, ?)`,
-        args: ['AI Wire - AI Industry', 'https://www.aiwire.net/category/ai-industry/feed/', 'AI Industry']
-      },
-      {
-        sql: `INSERT OR REPLACE INTO rss_feeds (name, url, category) VALUES (?, ?, ?)`,
-        args: ['AI Wire - AI Tools', 'https://www.aiwire.net/category/ai-tools/feed/', 'AI Tools']
-      },
-      {
-        sql: `INSERT OR REPLACE INTO rss_feeds (name, url, category) VALUES (?, ?, ?)`,
-        args: ['AI Wire - AI Startups', 'https://www.aiwire.net/category/ai-startups/feed/', 'AI Startups']
-      },
-      {
-        sql: `INSERT OR REPLACE INTO rss_feeds (name, url, category) VALUES (?, ?, ?)`,
-        args: ['AI Wire - AI Companies', 'https://www.aiwire.net/category/ai-companies/feed/', 'AI Companies']
-      },
-      {
-        sql: `INSERT OR REPLACE INTO rss_feeds (name, url, category) VALUES (?, ?, ?)`,
-        args: ['AI Wire - AI Events', 'https://www.aiwire.net/category/ai-events/feed/', 'AI Events']
-      },
-      {
-        sql: `INSERT OR REPLACE INTO rss_feeds (name, url, category) VALUES (?, ?, ?)`,
-        args: ['AI Wire - AI Conferences', 'https://www.aiwire.net/category/ai-conferences/feed/', 'AI Conferences']
-      },
+      // AI Wire RSS feeds (15 feeds) - COMMENTED OUT DUE TO LOADING ISSUES
+      // {
+      //   sql: `INSERT OR REPLACE INTO rss_feeds (name, url, category) VALUES (?, ?, ?)`,
+      //   args: ['AI Wire - AI News', 'https://www.aiwire.net/feed/', 'AI News']
+      // },
+      // {
+      //   sql: `INSERT OR REPLACE INTO rss_feeds (name, url, category) VALUES (?, ?, ?)`,
+      //   args: ['AI Wire - Machine Learning', 'https://www.aiwire.net/category/machine-learning/feed/', 'Machine Learning']
+      // },
+      // {
+      //   sql: `INSERT OR REPLACE INTO rss_feeds (name, url, category) VALUES (?, ?, ?)`,
+      //   args: ['AI Wire - Deep Learning', 'https://www.aiwire.net/category/deep-learning/feed/', 'Deep Learning']
+      // },
+      // {
+      //   sql: `INSERT OR REPLACE INTO rss_feeds (name, url, category) VALUES (?, ?, ?)`,
+      //   args: ['AI Wire - Natural Language Processing', 'https://www.aiwire.net/category/natural-language-processing/feed/', 'NLP']
+      // },
+      // {
+      //   sql: `INSERT OR REPLACE INTO rss_feeds (name, url, category) VALUES (?, ?, ?)`,
+      //   args: ['AI Wire - Computer Vision', 'https://www.aiwire.net/category/computer-vision/feed/', 'Computer Vision']
+      // },
+      // {
+      //   sql: `INSERT OR REPLACE INTO rss_feeds (name, url, category) VALUES (?, ?, ?)`,
+      //   args: ['AI Wire - Robotics', 'https://www.aiwire.net/category/robotics/feed/', 'Robotics']
+      // },
+      // {
+      //   sql: `INSERT OR REPLACE INTO rss_feeds (name, url, category) VALUES (?, ?, ?)`,
+      //   args: ['AI Wire - AI Ethics', 'https://www.aiwire.net/category/ai-ethics/feed/', 'AI Ethics']
+      // },
+      // {
+      //   sql: `INSERT OR REPLACE INTO rss_feeds (name, url, category) VALUES (?, ?, ?)`,
+      //   args: ['AI Wire - AI Research', 'https://www.aiwire.net/category/ai-research/feed/', 'AI Research']
+      // },
+      // {
+      //   sql: `INSERT OR REPLACE INTO rss_feeds (name, url, category) VALUES (?, ?, ?)`,
+      //   args: ['AI Wire - AI Applications', 'https://www.aiwire.net/category/ai-applications/feed/', 'AI Applications']
+      // },
+      // {
+      //   sql: `INSERT OR REPLACE INTO rss_feeds (name, url, category) VALUES (?, ?, ?)`,
+      //   args: ['AI Wire - AI Industry', 'https://www.aiwire.net/category/ai-industry/feed/', 'AI Industry']
+      // },
+      // {
+      //   sql: `INSERT OR REPLACE INTO rss_feeds (name, url, category) VALUES (?, ?, ?)`,
+      //   args: ['AI Wire - AI Tools', 'https://www.aiwire.net/category/ai-tools/feed/', 'AI Tools']
+      // },
+      // {
+      //   sql: `INSERT OR REPLACE INTO rss_feeds (name, url, category) VALUES (?, ?, ?)`,
+      //   args: ['AI Wire - AI Startups', 'https://www.aiwire.net/category/ai-startups/feed/', 'AI Startups']
+      // },
+      // {
+      //   sql: `INSERT OR REPLACE INTO rss_feeds (name, url, category) VALUES (?, ?, ?)`,
+      //   args: ['AI Wire - AI Companies', 'https://www.aiwire.net/category/ai-companies/feed/', 'AI Companies']
+      // },
+      // {
+      //   sql: `INSERT OR REPLACE INTO rss_feeds (name, url, category) VALUES (?, ?, ?)`,
+      //   args: ['AI Wire - AI Events', 'https://www.aiwire.net/category/ai-events/feed/', 'AI Events']
+      // },
+      // {
+      //   sql: `INSERT OR REPLACE INTO rss_feeds (name, url, category) VALUES (?, ?, ?)`,
+      //   args: ['AI Wire - AI Conferences', 'https://www.aiwire.net/category/ai-conferences/feed/', 'AI Conferences']
+      // },
       
       // JPMorgan Chase RSS feeds (5 feeds)
       {

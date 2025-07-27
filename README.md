@@ -13,6 +13,7 @@ A comprehensive tech news fetching and analysis system that uses **libSQL** for 
 - **Scheduling**: Automated RSS fetching with cron jobs
 - **Semantic Search**: Find similar articles using Nomic's superior text embeddings
 - **Social Media Monitoring**: Track trending hashtags and tech influencers
+- **🤖 AI Agent**: Intelligent Q&A system using LangChain and Ollama for comprehensive answers
 
 ## 🛠️ Tech Stack
 
@@ -98,6 +99,36 @@ pnpm run db:init
 ```
 
 ### 7. Start Fetching RSS Feeds
+
+### 8. 🤖 Try the AI Agent
+
+The AI Agent provides intelligent Q&A based on your news articles:
+
+```bash
+# Ask general questions
+npm run agent:ask "What are the latest developments in artificial intelligence?"
+
+# Ask about specific companies
+npm run agent:company "Apple" "What are their latest product announcements?"
+
+# Get sentiment summaries
+npm run agent:sentiment positive
+
+# Interactive chat mode
+npm run agent:chat
+
+# Test all agent functionality
+npm run test:agent
+```
+
+**Features:**
+- Intelligent responses based on your article database
+- Company-specific queries
+- Sentiment analysis summaries
+- Interactive chat mode
+- Source attribution with relevance scores
+
+See [AGENT_README.md](./AGENT_README.md) for detailed documentation.
 
 ```bash
 # Fetch all RSS feeds and save to database
