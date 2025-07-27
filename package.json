@@ -4,15 +4,12 @@
   "description": "Tech news scraping and analysis system with libsql storage and embeddings",
   "main": "dist/index.js",
   "type": "module",
-  "scripts": {
+    "scripts": {
     "build": "tsc",
     "start": "node dist/index.js",
     "dev": "tsx src/scraper.ts",
-    "test": "jest",
     "scrape": "tsx src/scraper.ts",
-    "scrape:debug": "tsx src/scraper.ts scrape --debug",
     "scrape:source": "tsx src/scraper.ts scrape --source",
-    "scrape:source:debug": "tsx src/scraper.ts scrape --source --debug",
     "rss": "tsx src/rss.ts",
     "rss:fetch": "tsx src/rss.ts fetch",
     "rss:list": "tsx src/rss.ts list",
@@ -50,17 +47,15 @@
     "vectorstore:stats": "tsx src/vectorstore.ts stats",
     "vectorstore:cleanup": "tsx src/vectorstore.ts cleanup",
     "vectorstore:duplicates": "tsx src/vectorstore.ts duplicates",
-    "vectorstore:dedupe": "tsx src/vectorstore.ts dedupe",
-    "vec": "tsx test.ts",
+        "vectorstore:dedupe": "tsx src/vectorstore.ts dedupe",
     "agent": "tsx src/cli/agent.ts",
     "agent:ask": "tsx src/cli/agent.ts ask",
     "agent:company": "tsx src/cli/agent.ts company",
     "agent:sentiment": "tsx src/cli/agent.ts sentiment",
     "agent:chat": "tsx src/cli/agent.ts chat",
     "agent:stats": "tsx src/cli/agent.ts stats",
-    "test:agent": "tsx test-agent.ts",
-    "remove:aiwire": "tsx remove-aiwire-feeds.ts",
-    "test:rss": "tsx test-rss-feeds.ts"
+    "test:two-stage": "tsx test-two-stage-agent.ts",
+    "test:filtering": "tsx test-strict-filtering.ts"
   },
   "dependencies": {
     "@atproto/api": "^0.8.0",
@@ -78,11 +73,9 @@
     "playwright": "^1.40.0",
     "rss-parser": "^3.13.0"
   },
-  "devDependencies": {
-    "@types/jest": "^29.5.0",
+    "devDependencies": {
     "@types/node": "^20.10.0",
-    "@types/node-cron": "^3.0.11",
-    "jest": "^29.7.0",
+        "@types/node-cron": "^3.0.11",
     "tsx": "^4.6.0",
     "typescript": "^5.3.0"
   },

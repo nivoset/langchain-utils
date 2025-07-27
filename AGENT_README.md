@@ -1,15 +1,16 @@
-# 🤖 AI Agent - Intelligent Q&A System
+# 🤖 AI Agent - Two-Stage Intelligent Q&A System
 
-The AI Agent provides intelligent responses to questions based on your news article database using LangChain and Ollama. It searches through your vector store to find relevant articles and generates comprehensive answers.
+The AI Agent provides intelligent responses to questions based on your news article database using LangChain and Ollama. It uses a sophisticated **two-stage processing approach** for comprehensive analysis.
 
 ## 🚀 Features
 
+- **Two-Stage Processing**: Each article is analyzed individually, then insights are synthesized
 - **Intelligent Q&A**: Ask questions and get AI-generated responses based on your news articles
 - **Company-Specific Queries**: Get detailed information about specific companies
 - **Sentiment Analysis**: Get summaries of news by sentiment (positive, negative, neutral)
 - **Interactive Chat**: Have a conversation with the AI agent
 - **Source Attribution**: All responses include source articles with relevance scores
-- **Fast Processing**: Optimized for quick responses with configurable parameters
+- **Comprehensive Analysis**: Deep insights from individual article analysis
 
 ## 📋 Prerequisites
 
@@ -38,6 +39,35 @@ npm install
 # Build the project
 npm run build
 ```
+
+## 🔄 Two-Stage Processing
+
+The AI Agent uses a sophisticated two-stage approach for comprehensive analysis:
+
+### **Stage 1: Individual Article Analysis & Filtering**
+- Each relevant article is analyzed in isolation
+- The AI determines if the article is **RELEVANT** to your question
+- **Filters out irrelevant articles** that don't contain specific information to answer your query
+- For relevant articles, extracts key insights, facts, and connections
+- Identifies relevance level (High/Medium) for each relevant article
+- Captures specific quotes, statistics, and details
+- Notes how each article contributes to answering the question
+
+### **Stage 2: Synthesis & Integration**
+- Only **relevant analyses** are passed to the synthesis stage
+- The AI synthesizes the best and most relevant insights from filtered articles
+- Creates a comprehensive, well-structured answer
+- Highlights conflicting information or different perspectives
+- Provides source attribution for all facts and insights
+
+### **Benefits:**
+- **Deeper Analysis**: Each article gets individual attention
+- **Smart Filtering**: Automatically filters out irrelevant content
+- **Better Synthesis**: Comprehensive integration of only relevant insights
+- **Source Transparency**: Clear attribution of information
+- **Conflict Resolution**: Identifies and explains different perspectives
+- **Quality Control**: Individual analysis ensures no important details are missed
+- **Efficiency**: Only processes relevant articles in the synthesis stage
 
 ## 🎯 Usage
 
@@ -110,6 +140,12 @@ Run the comprehensive test suite:
 ```bash
 # Test all agent functionality
 npm run test:agent
+
+# Test the new two-stage processing
+npm run test:two-stage
+
+# Test the improved strict filtering
+npm run test:filtering
 ```
 
 This will test:
@@ -117,6 +153,46 @@ This will test:
 - Company-specific queries
 - Sentiment summaries
 - Vector store statistics
+- Two-stage processing workflow
+
+## 🔍 Smart Filtering
+
+The agent now includes intelligent filtering that automatically removes irrelevant articles:
+
+### **How Filtering Works:**
+1. **Individual Analysis**: Each article is analyzed to determine relevance
+2. **Relevance Assessment**: Articles are marked as "Relevant" or "NOT_RELEVANT"
+3. **Filtering**: Only relevant articles proceed to the synthesis stage
+4. **Transparency**: You can see how many articles were filtered out
+
+### **Filtering Criteria:**
+- Articles must contain **specific information** that directly answers your question
+- **Strict relevance assessment** - tangential mentions are filtered out
+- Only articles with **direct, specific relevance** are included
+- **Relevance levels**: 
+  - High (95%): Article contains direct, specific information that answers the question
+  - Medium (75%): Article contains relevant information but not the primary focus
+  - Low (25%): Article is only tangentially related (filtered out)
+- **Examples of what gets filtered out**:
+  - Articles that only briefly mention the topic
+  - Articles about unrelated subjects (e.g., Unicode emoji for AI question)
+  - Articles with tangential connections
+
+### **Example Filtering Output:**
+```
+🔍 Stage 1: Analyzing each article individually...
+  📄 Analyzing article 1/6: "New AI Breakthrough in Healthcare"
+    ✅ Relevant (High)
+  📄 Analyzing article 2/6: "Stock Market Update"
+    ❌ Not relevant - filtered out
+  📄 Analyzing article 3/6: "Tech Company Earnings"
+    ❌ Not relevant - filtered out
+
+📊 Filtering Results:
+  - Total articles analyzed: 6
+  - Relevant articles: 3
+  - Filtered out: 3
+```
 
 ## 📊 Example Output
 

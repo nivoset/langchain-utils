@@ -20,11 +20,10 @@ program
   .command('scrape')
   .description('Scrape all configured news sources')
   .option('-s, --source <name>', 'Scrape specific source only')
-  .option('-d, --debug', 'Run in debug mode (non-headless browser)')
   .action(async (options) => {
     try {
       await initDatabase();
-      const scraper = new ScraperService(options.debug);
+      const scraper = new ScraperService();
       
       await scraper.initialize();
       
@@ -86,11 +85,11 @@ program
   .command('schedule')
   .description('Schedule regular scraping and analysis')
   .option('-i, --interval <minutes>', 'Scraping interval in minutes', '60')
-  .option('-d, --debug', 'Run in debug mode (non-headless browser)')
+
   .action(async (options) => {
     try {
       await initDatabase();
-      const scraper = new ScraperService(options.debug);
+      const scraper = new ScraperService();
       const patternService = new PatternService();
       
       await scraper.initialize();
@@ -100,9 +99,7 @@ program
       
       console.log(`Scheduling scraping every ${intervalMinutes} minutes...`);
       console.log(`Cron expression: ${cronExpression}`);
-      if (options.debug) {
-        console.log('Debug mode enabled - browser will run in non-headless mode');
-      }
+
       
       cron.schedule(cronExpression, async () => {
         console.log(`\n[${new Date().toISOString()}] Starting scheduled scraping...`);

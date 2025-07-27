@@ -27,17 +27,11 @@ export interface NewsSource {
 
 export class ScraperService {
   private browser: Browser | null = null;
-  private debug: boolean;
-
-  constructor(debug: boolean = false) {
-    this.debug = debug;
-  }
 
   async initialize() {
     this.browser = await chromium.launch({
-      headless: !this.debug, // Run in headless mode unless debug is true
-      args: ['--no-sandbox', '--disable-setuid-sandbox'],
-      slowMo: this.debug ? 1000 : 0 // Add slow motion in debug mode
+      headless: true,
+      args: ['--no-sandbox', '--disable-setuid-sandbox']
     });
   }
 
@@ -65,12 +59,7 @@ export class ScraperService {
       isActive: row.is_active === 1
     }));
 
-    if (this.debug) {
-      console.log(`  Debug: Found ${sources.length} active sources:`);
-      sources.forEach((source, index) => {
-        console.log(`    ${index + 1}. ${source.name} (ID: ${source.id})`);
-      });
-    }
+
     
     return sources;
   }
@@ -86,47 +75,24 @@ export class ScraperService {
     try {
       console.log(`Scraping ${source.name}...`);
       
-      if (this.debug) {
-        console.log(`  Debug: Navigating to ${source.url}`);
-      }
-      
       // Set reasonable timeout and wait for dom content loaded
       await page.goto(source.url, { 
         waitUntil: 'domcontentloaded',
         timeout: 30000 
       });
 
-      if (this.debug) {
-        console.log(`  Debug: Page loaded, looking for article links with selector: ${source.selectorLink}`);
-      }
-
       // Get article links using more robust selectors
       const links = await page.$$eval(source.selectorLink, (elements) =>
         elements.map(el => (el as HTMLAnchorElement).href).slice(0, 10) // Limit to 10 articles
       );
 
-      if (this.debug) {
-        console.log(`  Debug: Found ${links.length} article links`);
-      }
-
       // Process articles with better error handling and rate limiting
       for (let i = 0; i < links.length; i++) {
         const link = links[i];
         try {
-          if (this.debug) {
-            console.log(`  Debug: Processing article ${i + 1}/${links.length}: ${link}`);
-          }
-          
           const article = await this.scrapeArticle(page, link, source);
           if (article) {
             articles.push(article);
-            if (this.debug) {
-              console.log(`  Debug: Successfully scraped article: "${article.title}"`);
-            }
-          } else {
-            if (this.debug) {
-              console.log(`  Debug: Failed to scrape article (no title/content)`);
-            }
           }
           
           // Add small delay between requests to be respectful
@@ -394,23 +360,11 @@ export class ScraperService {
   }
 
   async scrapeAllSources(): Promise<void> {
-    if (this.debug) {
-      console.log('  Debug: Starting scrapeAllSources()');
-    }
-    
     const sources = await this.getActiveSources();
-    
-    if (this.debug) {
-      console.log(`  Debug: Will scrape ${sources.length} sources`);
-    }
     
     for (let i = 0; i < sources.length; i++) {
       const source = sources[i];
       try {
-        if (this.debug) {
-          console.log(`  Debug: Processing source ${i + 1}/${sources.length}: ${source.name}`);
-        }
-        
         const articles = await this.scrapeSource(source);
         
         for (const article of articles) {
@@ -421,19 +375,12 @@ export class ScraperService {
         
         // Add delay between sources to be respectful
         if (i < sources.length - 1) { // Don't delay after the last source
-          if (this.debug) {
-            console.log(`  Debug: Waiting 2 seconds before next source...`);
-          }
           await new Promise(resolve => setTimeout(resolve, 2000));
         }
         
       } catch (error) {
         console.error(`Error scraping source ${source.name}:`, error);
       }
-    }
-    
-    if (this.debug) {
-      console.log('  Debug: Completed scrapeAllSources()');
     }
   }
 } 

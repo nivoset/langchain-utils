@@ -8,6 +8,13 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
+export interface IndividualAnalysisResult {
+  isRelevant: boolean;
+  analysis: string;
+  document: Document;
+  relevance: 'High' | 'Medium' | 'Low';
+}
+
 export interface AgentResponse {
   answer: string;
   sources: Array<{
@@ -21,6 +28,8 @@ export interface AgentResponse {
     query: string;
     documentsRetrieved: number;
     processingTime: number;
+    relevantDocuments: number;
+    filteredDocuments: number;
     debug?: {
       medianSimilarity: number;
       topSimilarity: number;
@@ -33,34 +42,82 @@ export interface AgentResponse {
 export class AgentService {
   private vectorStoreService: VectorStoreService;
   private model: ChatOllama;
-  private promptTemplate: PromptTemplate;
+  private individualAnalysisPrompt: PromptTemplate;
+  private synthesisPrompt: PromptTemplate;
 
   constructor() {
     this.vectorStoreService = new VectorStoreService();
     
     this.model = new ChatOllama({
-      model: process.env.OLLAMA_MODEL || 'mistral',
+      model: process.env.OLLAMA_MODEL || 'deepseek-ai',
       baseUrl: process.env.OLLAMA_BASE_URL || 'http://localhost:11434',
       temperature: 0.1,
-      // maxTokens: 2000
     });
 
-    this.promptTemplate = PromptTemplate.fromTemplate(`
-You are a helpful AI assistant that answers questions based on the provided context from news articles. 
+    // Prompt for individual article analysis with strict filtering
+    this.individualAnalysisPrompt = PromptTemplate.fromTemplate(`
+You are an expert analyst reviewing a news article to answer a specific question.
 
-Context information from relevant articles:
-{context}
+Article Information:
+- Title: {title}
+- Source: {source}
+- Published: {publishedAt}
+- URL: {url}
+
+Article Content:
+{content}
 
 Question: {question}
 
 Instructions:
-1. Answer the question based ONLY on the provided context
-3. Be specific and cite the sources when possible
-4. Provide a comprehensive but concise answer
-5. If there are multiple perspectives in the articles, mention them
-6. Format your response in a clear, structured way
+1. **STRICT RELEVANCE CHECK**: Determine if this article contains SPECIFIC information that directly answers or significantly relates to the question
+2. **HIGH RELEVANCE**: Article contains direct, specific information that answers the question
+3. **MEDIUM RELEVANCE**: Article contains relevant information but not the primary focus
+4. **NOT RELEVANT**: Article is only tangentially related or doesn't contain specific information to answer the question
 
-Answer: `);
+**CRITICAL**: Be very strict about relevance. If the article doesn't contain specific, direct information related to the question, mark it as NOT_RELEVANT.
+
+Examples:
+- Question: "What are the latest developments in AI?"
+- Article about "New AI breakthrough in healthcare" → HIGH RELEVANCE
+- Article about "Tech company earnings" (mentions AI briefly) → NOT_RELEVANT
+- Article about "Unicode emoji updates" → NOT_RELEVANT
+
+Response Format:
+If NOT RELEVANT:
+NOT_RELEVANT: [Specific explanation of why this article doesn't contain information to answer the question]
+
+If RELEVANT:
+RELEVANCE: [High/Medium] - [Specific explanation of how this article directly relates to the question]
+KEY INSIGHTS:
+- [Insight 1 with specific details that directly answer the question]
+- [Insight 2 with specific details that directly answer the question]
+- [Insight 3 with specific details that directly answer the question]
+
+QUOTES/STATS: [Any relevant quotes or statistics that directly relate to the question]
+CONNECTION TO QUESTION: [Specific explanation of how this article answers or directly relates to the question]
+
+Analysis: `);
+
+    // Prompt for synthesizing all analyses
+    this.synthesisPrompt = PromptTemplate.fromTemplate(`
+You are an expert analyst synthesizing insights from multiple news articles to answer a question comprehensively.
+
+Question: {question}
+
+Individual Article Analyses:
+{individualAnalyses}
+
+Instructions:
+1. Review all the individual article analyses above
+2. Synthesize the best and most relevant insights
+3. Create a comprehensive answer that addresses the question
+4. Organize information logically and clearly
+5. Cite specific sources when mentioning facts or insights
+6. Highlight any conflicting information or different perspectives
+7. Provide a well-structured, informative response
+
+Synthesized Answer: `);
   }
 
   /**
@@ -95,7 +152,9 @@ Answer: `);
           metadata: {
             query: question,
             documentsRetrieved: 0,
-            processingTime: Date.now() - startTime
+            processingTime: Date.now() - startTime,
+            relevantDocuments: 0,
+            filteredDocuments: 0
           }
         };
       }
@@ -126,6 +185,8 @@ Try lowering the threshold (e.g., --threshold ${Math.max(0.1, similarityThreshol
             query: question,
             documentsRetrieved: searchResults.length,
             processingTime: Date.now() - startTime,
+            relevantDocuments: 0,
+            filteredDocuments: 0,
             debug: {
               medianSimilarity,
               topSimilarity,
@@ -138,30 +199,75 @@ Try lowering the threshold (e.g., --threshold ${Math.max(0.1, similarityThreshol
 
       console.log(`📚 Found ${relevantResults.length} relevant articles`);
 
-      // Prepare context from documents
-      const context = this.prepareContext(relevantResults);
+      // Stage 1: Analyze each article individually with filtering
+      console.log('🔍 Stage 1: Analyzing each article individually...');
+      const individualAnalyses: IndividualAnalysisResult[] = [];
       
-      // Prepare sources for response
-      const sources = relevantResults.map(result => ({
-        title: result.document.metadata.title as string,
-        url: result.document.metadata.url as string,
-        source: result.document.metadata.source as string,
-        publishedAt: result.document.metadata.publishedAt as string,
-        relevance: Math.round((1 - result.score) * 100) // Convert similarity to relevance percentage
-      }));
+      for (let i = 0; i < relevantResults.length; i++) {
+        const result = relevantResults[i];
+        const document = result.document;
+        
+        console.log(`  📄 Analyzing article ${i + 1}/${relevantResults.length}: "${document.metadata.title}"`);
+        
+        try {
+          const analysis = await this.analyzeIndividualArticle(document, question);
+          individualAnalyses.push(analysis);
+          
+          if (analysis.isRelevant) {
+            console.log(`    ✅ Relevant (${analysis.relevance})`);
+          } else {
+            console.log(`    ❌ Not relevant - filtered out`);
+          }
+        } catch (error) {
+          console.warn(`  ⚠️ Failed to analyze article "${document.metadata.title}":`, error);
+          // Continue with other articles
+        }
+      }
 
-      // Generate response using LangChain
-      console.log('🧠 Generating AI response...');
-      const chain = RunnableSequence.from([
-        this.promptTemplate,
+      // Filter to only relevant analyses
+      const relevantAnalyses = individualAnalyses.filter(analysis => analysis.isRelevant);
+      const filteredCount = individualAnalyses.length - relevantAnalyses.length;
+      
+      console.log(`\n📊 Filtering Results:`);
+      console.log(`  - Total articles analyzed: ${individualAnalyses.length}`);
+      console.log(`  - Relevant articles: ${relevantAnalyses.length}`);
+      console.log(`  - Filtered out: ${filteredCount}`);
+
+      if (relevantAnalyses.length === 0) {
+        return {
+          answer: "I analyzed the articles but found none that are directly relevant to your question. The articles may be tangentially related but don't contain specific information to answer your query.",
+          sources: [],
+          metadata: {
+            query: question,
+            documentsRetrieved: relevantResults.length,
+            processingTime: Date.now() - startTime,
+            relevantDocuments: 0,
+            filteredDocuments: filteredCount
+          }
+        };
+      }
+
+      // Stage 2: Synthesize only relevant analyses into a comprehensive answer
+      console.log('🧠 Stage 2: Synthesizing insights from relevant articles...');
+      const synthesisChain = RunnableSequence.from([
+        this.synthesisPrompt,
         this.model,
         new StringOutputParser()
       ]);
 
-      const answer = await chain.invoke({
-        context: context,
-        question: question
+      const answer = await synthesisChain.invoke({
+        question: question,
+        individualAnalyses: relevantAnalyses.map(analysis => analysis.analysis).join('\n\n---\n\n')
       });
+
+      // Prepare sources for response (only relevant ones)
+      const sources = relevantAnalyses.map(analysis => ({
+        title: analysis.document.metadata.title as string,
+        url: analysis.document.metadata.url as string,
+        source: analysis.document.metadata.source as string,
+        publishedAt: analysis.document.metadata.publishedAt as string,
+        relevance: analysis.relevance === 'High' ? 95 : analysis.relevance === 'Medium' ? 75 : 25 // Convert relevance level to percentage
+      }));
 
       const processingTime = Date.now() - startTime;
 
@@ -173,7 +279,9 @@ Try lowering the threshold (e.g., --threshold ${Math.max(0.1, similarityThreshol
         metadata: {
           query: question,
           documentsRetrieved: relevantResults.length,
-          processingTime: processingTime
+          processingTime: processingTime,
+          relevantDocuments: relevantAnalyses.length,
+          filteredDocuments: filteredCount
         }
       };
 
@@ -206,51 +314,105 @@ Try lowering the threshold (e.g., --threshold ${Math.max(0.1, similarityThreshol
           metadata: {
             query: `${question} (about ${companyName})`,
             documentsRetrieved: 0,
-            processingTime: Date.now() - startTime
+            processingTime: Date.now() - startTime,
+            relevantDocuments: 0,
+            filteredDocuments: 0
           }
         };
       }
 
-      const context = this.prepareContext(searchResults);
+      console.log(`📚 Found ${searchResults.length} articles about ${companyName}`);
+
+      // Stage 1: Analyze each article individually with filtering
+      console.log('🔍 Stage 1: Analyzing each article individually...');
+      const individualAnalyses: IndividualAnalysisResult[] = [];
       
-      const sources = searchResults.map(result => ({
-        title: result.document.metadata.title as string,
-        url: result.document.metadata.url as string,
-        source: result.document.metadata.source as string,
-        publishedAt: result.document.metadata.publishedAt as string,
-        relevance: Math.round((1 - result.score) * 100)
-      }));
+      for (let i = 0; i < searchResults.length; i++) {
+        const result = searchResults[i];
+        const document = result.document;
+        
+        console.log(`  📄 Analyzing article ${i + 1}/${searchResults.length}: "${document.metadata.title}"`);
+        
+        try {
+          const analysis = await this.analyzeIndividualArticle(document, question);
+          individualAnalyses.push(analysis);
+          
+          if (analysis.isRelevant) {
+            console.log(`    ✅ Relevant (${analysis.relevance})`);
+          } else {
+            console.log(`    ❌ Not relevant - filtered out`);
+          }
+        } catch (error) {
+          console.warn(`  ⚠️ Failed to analyze article "${document.metadata.title}":`, error);
+        }
+      }
 
-      // Use a company-specific prompt
-      const companyPrompt = PromptTemplate.fromTemplate(`
-You are a helpful AI assistant that answers questions about specific companies based on news articles.
+      // Filter to only relevant analyses
+      const relevantAnalyses = individualAnalyses.filter(analysis => analysis.isRelevant);
+      const filteredCount = individualAnalyses.length - relevantAnalyses.length;
+      
+      console.log(`\n📊 Filtering Results:`);
+      console.log(`  - Total articles analyzed: ${individualAnalyses.length}`);
+      console.log(`  - Relevant articles: ${relevantAnalyses.length}`);
+      console.log(`  - Filtered out: ${filteredCount}`);
 
-Context information about {companyName} from relevant articles:
-{context}
+      if (relevantAnalyses.length === 0) {
+        return {
+          answer: `I analyzed the articles about ${companyName} but found none that are directly relevant to your question. The articles may be tangentially related but don't contain specific information to answer your query.`,
+          sources: [],
+          metadata: {
+            query: `${question} (about ${companyName})`,
+            documentsRetrieved: searchResults.length,
+            processingTime: Date.now() - startTime,
+            relevantDocuments: 0,
+            filteredDocuments: filteredCount
+          }
+        };
+      }
 
+      // Stage 2: Synthesize with company-specific focus
+      console.log('🧠 Stage 2: Synthesizing insights about the company...');
+      const companySynthesisPrompt = PromptTemplate.fromTemplate(`
+You are an expert analyst synthesizing insights about a specific company from multiple news articles.
+
+Company: {companyName}
 Question: {question}
 
+Individual Article Analyses:
+{individualAnalyses}
+
 Instructions:
-1. Focus specifically on {companyName} in your answer
-2. Answer based ONLY on the provided context
-3. If the context doesn't contain enough information about {companyName}, say so
-4. Be specific and cite the sources when possible
-5. Mention any recent developments, trends, or news about {companyName}
-6. If there are multiple perspectives, mention them
+1. Focus specifically on {companyName} in your synthesis
+2. Review all the individual article analyses above
+3. Synthesize the best and most relevant insights about {companyName}
+4. Create a comprehensive answer that addresses the question
+5. Organize information logically and clearly
+6. Cite specific sources when mentioning facts or insights
+7. Highlight any recent developments, trends, or news about {companyName}
+8. If there are multiple perspectives, mention them
+9. If the context doesn't contain enough information about {companyName}, say so
 
-Answer: `);
+Synthesized Answer: `);
 
-      const chain = RunnableSequence.from([
-        companyPrompt,
+      const synthesisChain = RunnableSequence.from([
+        companySynthesisPrompt,
         this.model,
         new StringOutputParser()
       ]);
 
-      const answer = await chain.invoke({
+      const answer = await synthesisChain.invoke({
         companyName: companyName,
-        context: context,
-        question: question
+        question: question,
+        individualAnalyses: relevantAnalyses.map(analysis => analysis.analysis).join('\n\n---\n\n')
       });
+
+      const sources = relevantAnalyses.map(analysis => ({
+        title: analysis.document.metadata.title as string,
+        url: analysis.document.metadata.url as string,
+        source: analysis.document.metadata.source as string,
+        publishedAt: analysis.document.metadata.publishedAt as string,
+        relevance: analysis.relevance === 'High' ? 95 : analysis.relevance === 'Medium' ? 75 : 25
+      }));
 
       return {
         answer: answer.trim(),
@@ -258,7 +420,9 @@ Answer: `);
         metadata: {
           query: `${question} (about ${companyName})`,
           documentsRetrieved: searchResults.length,
-          processingTime: Date.now() - startTime
+          processingTime: Date.now() - startTime,
+          relevantDocuments: relevantAnalyses.length,
+          filteredDocuments: filteredCount
         }
       };
 
@@ -289,49 +453,103 @@ Answer: `);
           metadata: {
             query: `${sentiment} sentiment summary`,
             documentsRetrieved: 0,
-            processingTime: Date.now() - startTime
+            processingTime: Date.now() - startTime,
+            relevantDocuments: 0,
+            filteredDocuments: 0
           }
         };
       }
 
-      const context = this.prepareContext(searchResults);
+      console.log(`📚 Found ${searchResults.length} articles with ${sentiment} sentiment`);
+
+      // Stage 1: Analyze each article individually with filtering
+      console.log('🔍 Stage 1: Analyzing each article individually...');
+      const individualAnalyses: IndividualAnalysisResult[] = [];
       
-      const sources = searchResults.map(result => ({
-        title: result.document.metadata.title as string,
-        url: result.document.metadata.url as string,
-        source: result.document.metadata.source as string,
-        publishedAt: result.document.metadata.publishedAt as string,
-        relevance: Math.round((1 - result.score) * 100)
-      }));
+      for (let i = 0; i < searchResults.length; i++) {
+        const result = searchResults[i];
+        const document = result.document;
+        
+        console.log(`  📄 Analyzing article ${i + 1}/${searchResults.length}: "${document.metadata.title}"`);
+        
+        try {
+          const analysis = await this.analyzeIndividualArticle(document, `What are the key ${sentiment} developments in this article?`);
+          individualAnalyses.push(analysis);
+          
+          if (analysis.isRelevant) {
+            console.log(`    ✅ Relevant (${analysis.relevance})`);
+          } else {
+            console.log(`    ❌ Not relevant - filtered out`);
+          }
+        } catch (error) {
+          console.warn(`  ⚠️ Failed to analyze article "${document.metadata.title}":`, error);
+        }
+      }
 
-      const sentimentPrompt = PromptTemplate.fromTemplate(`
-You are a helpful AI assistant that provides summaries of news articles based on sentiment.
+      // Filter to only relevant analyses
+      const relevantAnalyses = individualAnalyses.filter(analysis => analysis.isRelevant);
+      const filteredCount = individualAnalyses.length - relevantAnalyses.length;
+      
+      console.log(`\n📊 Filtering Results:`);
+      console.log(`  - Total articles analyzed: ${individualAnalyses.length}`);
+      console.log(`  - Relevant articles: ${relevantAnalyses.length}`);
+      console.log(`  - Filtered out: ${filteredCount}`);
 
-Context information from {sentiment} sentiment articles:
-{context}
+      if (relevantAnalyses.length === 0) {
+        return {
+          answer: `I analyzed the articles with ${sentiment} sentiment but found none that are directly relevant to your query.`,
+          sources: [],
+          metadata: {
+            query: `${sentiment} sentiment summary`,
+            documentsRetrieved: searchResults.length,
+            processingTime: Date.now() - startTime,
+            relevantDocuments: 0,
+            filteredDocuments: filteredCount
+          }
+        };
+      }
 
-Please provide a comprehensive summary of the recent {sentiment} news and developments. 
+      // Stage 2: Synthesize with sentiment focus
+      console.log('🧠 Stage 2: Synthesizing sentiment insights...');
+      const sentimentSynthesisPrompt = PromptTemplate.fromTemplate(`
+You are an expert analyst synthesizing insights from {sentiment} sentiment news articles.
+
+Sentiment Focus: {sentiment}
+
+Individual Article Analyses:
+{individualAnalyses}
 
 Instructions:
-1. Focus on the {sentiment} aspects of the news
-2. Identify common themes and trends
-3. Highlight key developments and their implications
-4. Organize the information in a logical way
-5. Be specific and cite sources when possible
-6. Provide insights about what these developments mean
+1. Focus specifically on {sentiment} aspects of the news
+2. Review all the individual article analyses above
+3. Synthesize the best and most relevant {sentiment} insights
+4. Create a comprehensive summary of recent {sentiment} developments
+5. Identify common themes and trends across the articles
+6. Highlight key developments and their implications
+7. Organize information logically and clearly
+8. Cite specific sources when mentioning facts or insights
+9. Provide insights about what these {sentiment} developments mean
 
-Summary: `);
+Synthesized Summary: `);
 
-      const chain = RunnableSequence.from([
-        sentimentPrompt,
+      const synthesisChain = RunnableSequence.from([
+        sentimentSynthesisPrompt,
         this.model,
         new StringOutputParser()
       ]);
 
-      const answer = await chain.invoke({
+      const answer = await synthesisChain.invoke({
         sentiment: sentiment,
-        context: context
+        individualAnalyses: relevantAnalyses.map(analysis => analysis.analysis).join('\n\n---\n\n')
       });
+
+      const sources = relevantAnalyses.map(analysis => ({
+        title: analysis.document.metadata.title as string,
+        url: analysis.document.metadata.url as string,
+        source: analysis.document.metadata.source as string,
+        publishedAt: analysis.document.metadata.publishedAt as string,
+        relevance: analysis.relevance === 'High' ? 95 : analysis.relevance === 'Medium' ? 75 : 25
+      }));
 
       return {
         answer: answer.trim(),
@@ -339,7 +557,9 @@ Summary: `);
         metadata: {
           query: `${sentiment} sentiment summary`,
           documentsRetrieved: searchResults.length,
-          processingTime: Date.now() - startTime
+          processingTime: Date.now() - startTime,
+          relevantDocuments: relevantAnalyses.length,
+          filteredDocuments: filteredCount
         }
       };
 
@@ -349,23 +569,62 @@ Summary: `);
     }
   }
 
-  /**
-   * Prepare context string from search results
-   */
-  private prepareContext(searchResults: Array<{ document: Document; score: number }>): string {
-    return searchResults.map((result, index) => {
-      const doc = result.document;
-      const relevance = Math.round((1 - result.score) * 100);
-      
-      return `Article ${index + 1} (Relevance: ${relevance}%):
-Title: ${doc.metadata.title}
-Source: ${doc.metadata.source}
-Published: ${doc.metadata.publishedAt || 'Unknown'}
-URL: ${doc.metadata.url}
-Content: ${doc.pageContent.substring(0, 1000)}${doc.pageContent.length > 1000 ? '...' : ''}
 
----`;
-    }).join('\n\n');
+
+  /**
+   * Analyze a single article individually with filtering
+   */
+  private async analyzeIndividualArticle(document: Document, question: string): Promise<IndividualAnalysisResult> {
+    const analysisChain = RunnableSequence.from([
+      this.individualAnalysisPrompt,
+      this.model,
+      new StringOutputParser()
+    ]);
+
+    const analysis = await analysisChain.invoke({
+      title: document.metadata.title || 'Unknown Title',
+      source: document.metadata.source || 'Unknown Source',
+      publishedAt: document.metadata.publishedAt || 'Unknown Date',
+      url: document.metadata.url || 'No URL',
+      content: document.pageContent,
+      question: question
+    });
+
+    // Parse the analysis to determine relevance with stricter logic
+    const isRelevant = !analysis.trim().startsWith('NOT_RELEVANT');
+    let relevance: 'High' | 'Medium' | 'Low' = 'Low';
+    
+    if (isRelevant) {
+      // Extract relevance level from the analysis
+      const relevanceMatch = analysis.match(/RELEVANCE:\s*(High|Medium)/i);
+      if (relevanceMatch) {
+        const level = relevanceMatch[1] as 'High' | 'Medium';
+        
+        // Additional check: if the explanation suggests it's not very relevant, downgrade
+        const explanation = analysis.match(/RELEVANCE:\s*(High|Medium)\s*-\s*(.+?)(?:\n|$)/i);
+        if (explanation) {
+          const explanationText = explanation[2].toLowerCase();
+          // If explanation contains words suggesting low relevance, mark as Low
+          if (explanationText.includes('tangential') || 
+              explanationText.includes('brief mention') || 
+              explanationText.includes('not the primary focus') ||
+              explanationText.includes('only mentions')) {
+            relevance = 'Low';
+          } else {
+            relevance = level;
+          }
+        } else {
+          relevance = level;
+        }
+      }
+    }
+
+    return {
+      isRelevant,
+      analysis: `ARTICLE: ${document.metadata.title}\nSOURCE: ${document.metadata.source}\n${analysis}`,
+      document,
+      relevance
+    };
   }
 
   /**
